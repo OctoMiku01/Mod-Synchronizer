@@ -7,7 +7,7 @@ every player downloads the jars straight from their source, checked against the 
 
 The settings open from [Mod Menu](https://modrinth.com/mod/modmenu), or without it from the "Mod Sync" button at the
 top left of the title screen. There you set where the shared list is and which mods this installation needs, log in to
-GitHub, compare with the list right away, or export the mods folder as a list. They are kept in
+GitHub or enter an access code, compare with the list right away, or export the mods folder as a list. They are kept in
 `config/modsync.json`.
 
 ## How it works
@@ -36,8 +36,12 @@ The shared list can be in a repo, private ones too: `github:owner/repo/path/to/m
 
 When GitHub wants a login (private repo, or the anonymous rate limit is used up), the game shows a code to enter on
 github.com/login/device; the settings log in and out by hand. The token is kept in
-`~/.modsync/github-token`, shared by all instances; a fine-grained personal access token with read access to the
-repos' contents can be written there instead.
+`~/.modsync/github-token`, shared by all instances.
+
+Players without a GitHub account enter an access code in the settings instead: a fine-grained personal access token
+of the list's owner with only "Contents: Read-only" on the repos the list needs. The settings check it with GitHub
+before keeping it in the same place. Everyone who has the code reads those repos as its owner, so it is best given an
+expiry date and replaced if it gets passed on.
 
 The login goes through the GitHub App "Mod Synchronizer" (client ID `GITHUB_CLIENT_ID` in `ModSync.java`): device
 flow on, only read access to repo contents, and only for the repos it is installed in, so a private repo has to be

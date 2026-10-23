@@ -18,6 +18,8 @@ import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
@@ -88,12 +90,16 @@ public final class ModSyncScreen extends Screen {
             }
         }).width(WIDTH).build());
 
-        contents.addChild(label("modsync.settings.githubClientId"));
-        EditBox clientId = contents.addChild(new EditBox(font, WIDTH, 20, Component.translatable("modsync.settings.githubClientId")));
-        clientId.setMaxLength(64);
-        clientId.setValue(config.githubClientId);
-        clientId.setHint(Component.translatable("modsync.settings.githubClientId.hint").withStyle(ChatFormatting.DARK_GRAY));
-        clientId.setResponder(value -> config.githubClientId = value.strip());
+        // Without a GitHub account: a token with read access to the repos, handed out as an access code
+        contents.addChild(label("modsync.settings.accessCode"));
+        LinearLayout codeRow = contents.addChild(LinearLayout.horizontal().spacing(10));
+        EditBox code = codeRow.addChild(new EditBox(font, WIDTH - 90, 20, Component.translatable("modsync.settings.accessCode")));
+        code.setMaxLength(255);
+        code.setHint(Component.translatable("modsync.settings.accessCode.hint").withStyle(ChatFormatting.DARK_GRAY));
+        // Shown as dots, so that it does not end up readable in a screenshot or stream
+        code.addFormatter((text, firstCharacter) -> FormattedCharSequence.forward("•".repeat(text.length()), Style.EMPTY));
+        codeRow.addChild(Button.builder(Component.translatable("modsync.settings.accessCode.use"), button -> useAccessCode(code.getValue().strip()))
+                .width(80).build());
 
         layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, button -> onClose()).width(200).build());
         layout.visitWidgets(this::addRenderableWidget);
@@ -113,6 +119,27 @@ public final class ModSyncScreen extends Screen {
 
     private StringWidget label(String key) {
         return new StringWidget(WIDTH, 12, Component.translatable(key), font);
+    }
+
+    private void useAccessCode(String accessCode) {
+        if (accessCode.isEmpty()) {
+            return;
+        }
+        minecraft.gui.setScreen(new GenericMessageScreen(Component.translatable("modsync.settings.accessCode.checking")));
+        Thread thread = new Thread(() -> {
+            try {
+                sync.gitHubAuth().useToken(accessCode);
+                minecraft.execute(() -> minecraft.gui.setScreen(this));
+            } catch (IOException | RuntimeException e) {
+                ModSync.LOGGER.warn("GitHub did not accept the access code: {}", e.toString());
+                minecraft.execute(() -> minecraft.gui.setScreen(new AlertScreen(() -> minecraft.gui.setScreen(this),
+                        Component.translatable("modsync.settings.accessCode"), Component.translatable("modsync.settings.accessCode.invalid"))));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "Mod Synchronizer access code");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void export() {

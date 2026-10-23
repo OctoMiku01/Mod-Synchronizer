@@ -98,6 +98,20 @@ public final class GitHubAuth {
         throw new IOException("The code was not entered in time");
     }
 
+    /**
+     * Keeps a token the player entered instead of logging in, like a personal access token with read access to the
+     * repos handed out as an access code to players without a GitHub account; only once GitHub accepts it
+     */
+    public void useToken(String newToken) throws IOException, InterruptedException {
+        try {
+            http.get(URI.create("https://api.github.com/rate_limit"),
+                    Map.of("Authorization", "Bearer " + newToken, "Accept", "application/vnd.github+json"));
+        } catch (Http.StatusException e) {
+            throw new IOException("GitHub does not accept the access code (" + e.status() + ")", e);
+        }
+        save(newToken);
+    }
+
     public void logout() throws IOException {
         token = null;
         Files.deleteIfExists(tokenFile);
