@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.IntConsumer;
+import java.util.stream.Collectors;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +74,38 @@ public final class ModSync {
         }
         return SyncPlan.compute(manifest, LocalMods.scan(modsFolder), SyncState.load(stager.stateFile()), config.side,
                 sources.keySet(), modsFolder);
+    }
+
+    /**
+     * Whether the entries the plan skips were shown at start before: they can only be changed in the list, so the
+     * start shows them once, and again only once they change
+     */
+    public boolean skippedShownBefore(SyncPlan plan) {
+        try {
+            Path file = skippedFile();
+            return Files.exists(file) && Files.readString(file, StandardCharsets.UTF_8).equals(skipped(plan));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    public void markSkippedShown(SyncPlan plan) {
+        try {
+            Files.createDirectories(skippedFile().getParent());
+            Files.writeString(skippedFile(), skipped(plan), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            LOGGER.warn("Could not remember the skipped mods that were shown", e);
+        }
+    }
+
+    private Path skippedFile() {
+        return gameFolder.resolve("." + MOD_ID).resolve("skipped-shown.txt");
+    }
+
+    private static String skipped(SyncPlan plan) {
+        return plan.skipped().stream()
+                .map(skipped -> skipped.reason() + "\t" + skipped.entry().key() + "\t" + skipped.entry().file())
+                .sorted().collect(Collectors.joining("\n"));
     }
 
     /** Downloads the plan's jars and starts the helper that swaps them in once the game has exited */

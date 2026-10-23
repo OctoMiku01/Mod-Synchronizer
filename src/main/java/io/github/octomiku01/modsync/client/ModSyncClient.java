@@ -79,9 +79,11 @@ public class ModSyncClient implements ClientModInitializer {
         if (login) {
             ModSync currentSync = sync;
             SyncScreens.login(client, title, currentSync, () -> SyncScreens.check(client, title, currentSync));
-        } else if (current.isEmpty() && current.skipped().isEmpty()) {
-            ModSync.LOGGER.info("All mods match the list");
+        } else if (current.isEmpty() && (current.skipped().isEmpty() || sync.skippedShownBefore(current))) {
+            // Skipped entries were shown at an earlier start already: nothing the player can do about them
+            ModSync.LOGGER.info("All mods match the list{}", current.skipped().isEmpty() ? "" : ", but for " + current.skipped().size() + " skipped");
         } else {
+            sync.markSkippedShown(current);
             SyncScreens.showPlan(client, title, sync, current);
         }
     }
