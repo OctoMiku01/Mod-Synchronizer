@@ -9,8 +9,8 @@ import java.nio.file.Path;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
- * {@code config/modsync.json}; written back after loading, so that options added in a newer version show up in it and
- * it can be filled in by hand.
+ * {@code config/modsync.json}, set on the settings screen; written back after loading, so that options added in a
+ * newer version show up in it.
  */
 public final class ModSyncConfig {
     /**
@@ -24,25 +24,32 @@ public final class ModSyncConfig {
     public String githubClientId = "";
 
     public static ModSyncConfig load() {
-        Path file = FabricLoader.getInstance().getConfigDir().resolve(ModSync.MOD_ID + ".json");
         ModSyncConfig config = null;
         try {
-            if (Files.exists(file)) {
-                config = Manifest.GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), ModSyncConfig.class);
+            if (Files.exists(file())) {
+                config = Manifest.GSON.fromJson(Files.readString(file(), StandardCharsets.UTF_8), ModSyncConfig.class);
             }
         } catch (IOException | JsonParseException e) {
-            ModSync.LOGGER.error("Could not read {}, syncing is off", file, e);
+            ModSync.LOGGER.error("Could not read {}, syncing is off", file(), e);
             return new ModSyncConfig();
         }
         if (config == null) {
             config = new ModSyncConfig();
         }
-        try {
-            Files.createDirectories(file.getParent());
-            Files.writeString(file, Manifest.GSON.toJson(config), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            ModSync.LOGGER.warn("Could not write {}", file, e);
-        }
+        config.save();
         return config;
+    }
+
+    public void save() {
+        try {
+            Files.createDirectories(file().getParent());
+            Files.writeString(file(), Manifest.GSON.toJson(this), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            ModSync.LOGGER.warn("Could not write {}", file(), e);
+        }
+    }
+
+    private static Path file() {
+        return FabricLoader.getInstance().getConfigDir().resolve(ModSync.MOD_ID + ".json");
     }
 }

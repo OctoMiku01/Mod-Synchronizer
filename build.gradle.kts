@@ -22,10 +22,16 @@ tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
+repositories {
+    maven("https://maven.terraformersmc.com/releases") { content { includeGroup("com.terraformersmc") } }
+}
+
 dependencies {
     minecraft("com.mojang:minecraft:$minecraft")
     implementation("net.fabricmc:fabric-loader:${property("loader_version")}")
     implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
+    // Optional: the settings open from Mod Menu when it is installed, else from a button on the title screen
+    compileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}") { isTransitive = false }
 }
 
 tasks.processResources {

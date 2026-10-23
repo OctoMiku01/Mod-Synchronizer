@@ -17,6 +17,9 @@
 	"entrypoints": {
 		"client": [
 			"io.github.octomiku01.modsync.client.ModSyncClient"
+		],
+		"modmenu": [
+			"io.github.octomiku01.modsync.client.ModSyncModMenu"
 		]
 	},
 	"depends": {
@@ -24,5 +27,8 @@
 		"minecraft": "~${minecraft_version}",
 		"java": ">=25",
 		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
 	}
 }
