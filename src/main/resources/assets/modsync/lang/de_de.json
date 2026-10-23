@@ -40,7 +40,7 @@
 	"modsync.settings.github.loggedOut": "Nicht angemeldet: nur öffentliche Repos sind lesbar",
 	"modsync.settings.github.login": "Bei GitHub anmelden",
 	"modsync.settings.github.logout": "Bei GitHub abmelden",
-	"modsync.settings.githubClientId": "Client-ID der GitHub-OAuth-App",
+	"modsync.settings.githubClientId": "Client-ID einer anderen GitHub-App",
 	"modsync.settings.githubClientId.hint": "Leer: die eingebaute",
 	"modsync.export.openFolder": "Ordner öffnen"
 }

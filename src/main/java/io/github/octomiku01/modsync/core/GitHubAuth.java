@@ -17,7 +17,10 @@ import org.jetbrains.annotations.Nullable;
  * end up in exported instances; a personal access token written into the same file by hand works as well.
  */
 public final class GitHubAuth {
-    /** Reading private repos takes the "repo" scope: OAuth apps have no narrower one for it */
+    /**
+     * Reading private repos takes the "repo" scope from an OAuth app, which has no narrower one for it; a GitHub App
+     * ignores scopes and grants the permissions it was set up with instead
+     */
     private static final String SCOPE = "repo";
 
     /** What the player has to enter, and where */

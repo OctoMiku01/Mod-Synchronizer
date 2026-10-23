@@ -39,8 +39,10 @@ github.com/login/device; the settings log in and out by hand. The token is kept 
 `~/.modsync/github-token`, shared by all instances; a fine-grained personal access token with read access to the
 repos' contents can be written there instead.
 
-The login goes through a GitHub OAuth app with device flow enabled; its client ID is `GITHUB_CLIENT_ID` in
-`ModSync.java`, or the client ID entered in the settings.
+The login goes through the GitHub App "Mod Synchronizer" (client ID `GITHUB_CLIENT_ID` in `ModSync.java`): device
+flow on, only read access to repo contents, and only for the repos it is installed in, so a private repo has to be
+added to its installation before players can read it. Players still need read access to the repo themselves. Another
+GitHub App or OAuth app can be entered by its client ID in the settings.
 
 ## The list
 
@@ -78,4 +80,4 @@ found after the download.
 ## Layout
 
 - `core`: no Minecraft classes: list, hashes, sources, sync plan, download, helper process
-- `client`: Fabric entrypoint, screens, command
+- `client`: Fabric entrypoint, settings and sync screens

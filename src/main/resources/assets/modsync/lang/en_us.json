@@ -40,7 +40,7 @@
 	"modsync.settings.github.loggedOut": "Not logged in: only public repos can be read",
 	"modsync.settings.github.login": "Log in to GitHub",
 	"modsync.settings.github.logout": "Log out of GitHub",
-	"modsync.settings.githubClientId": "Client ID of the GitHub OAuth app",
+	"modsync.settings.githubClientId": "Client ID of another GitHub app",
 	"modsync.settings.githubClientId.hint": "Empty: the built-in one",
 	"modsync.export.openFolder": "Open folder"
 }

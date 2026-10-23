@@ -29,8 +29,11 @@ import org.slf4j.LoggerFactory;
 public final class ModSync {
     public static final String MOD_ID = "modsync";
     public static final Logger LOGGER = LoggerFactory.getLogger("Mod Synchronizer");
-    /** The GitHub OAuth app players log in through; a client ID is public, only the (unused) secret is not */
-    private static final String GITHUB_CLIENT_ID = "";
+    /**
+     * The GitHub App players log in through, with device flow on and only read access to repo contents; it reads just
+     * the repos it is installed in. A client ID is public, only the (unused) secret and private key are not.
+     */
+    private static final String GITHUB_CLIENT_ID = "Iv23liXIgToUgiXmtnxw";
     private static final String GITHUB_PREFIX = "github:";
 
     private final Http http = new Http(FabricLoader.getInstance().getModContainer(MOD_ID)

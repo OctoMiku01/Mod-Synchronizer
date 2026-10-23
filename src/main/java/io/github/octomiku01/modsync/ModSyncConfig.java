@@ -20,7 +20,7 @@ public final class ModSyncConfig {
     public String manifestUrl = "";
     /** Which mods of the list this installation needs */
     public Manifest.Side side = Manifest.Side.CLIENT;
-    /** The client ID of the GitHub OAuth app players log in through, with device flow enabled; empty: the built-in one */
+    /** The client ID of a GitHub App or OAuth app to log in through instead of the built-in one, with device flow on */
     public String githubClientId = "";
 
     public static ModSyncConfig load() {
