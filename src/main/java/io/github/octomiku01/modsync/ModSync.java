@@ -46,11 +46,17 @@ public final class ModSync {
     private final Map<String, ModSource> sources = Map.of(modrinth.id(), modrinth, gitHub.id(), gitHub);
     private final Path gameFolder = FabricLoader.getInstance().getGameDir();
     private final Path modsFolder = gameFolder.resolve("mods");
-    private final Stager stager = new Stager(http, sources, gameFolder.resolve("." + MOD_ID));
+    private final Path workFolder = gameFolder.resolve("." + MOD_ID);
+    private final Stager stager = new Stager(http, sources, workFolder);
     private final ModSyncConfig config;
 
     public ModSync(ModSyncConfig config) {
         this.config = config;
+    }
+
+    /** Deletes what earlier syncs left behind, see {@link ApplyHelper#cleanUp} */
+    public void cleanUp() {
+        ApplyHelper.cleanUp(workFolder);
     }
 
     public ModSyncConfig config() {
@@ -99,7 +105,7 @@ public final class ModSync {
     }
 
     private Path skippedFile() {
-        return gameFolder.resolve("." + MOD_ID).resolve("skipped-shown.txt");
+        return workFolder.resolve("skipped-shown.txt");
     }
 
     private static String skipped(SyncPlan plan) {

@@ -54,6 +54,34 @@ public final class ApplyHelper {
                 .start();
     }
 
+    /**
+     * Deletes what earlier syncs left in the work folder: the copies the helper ran from, which it cannot delete while
+     * it runs, and downloads no pending steps refer to any more. A file still in use is left for the next start.
+     */
+    public static void cleanUp(Path workFolder) {
+        deleteFiles(workFolder.resolve("helper"));
+        if (!Files.exists(workFolder.resolve("pending.txt"))) {
+            deleteFiles(workFolder.resolve("staging"));
+        }
+    }
+
+    private static void deleteFiles(Path folder) {
+        if (!Files.isDirectory(folder)) {
+            return;
+        }
+        try (Stream<Path> files = Files.list(folder)) {
+            for (Path file : files.toList()) {
+                try {
+                    Files.deleteIfExists(file);
+                } catch (IOException e) {
+                    // Still in use, by a helper that has not finished yet
+                }
+            }
+        } catch (IOException e) {
+            // Gone or unreadable: nothing to clean up
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         long gamePid = Long.parseLong(args[0]);
         Path stepsFile = Path.of(args[1]);

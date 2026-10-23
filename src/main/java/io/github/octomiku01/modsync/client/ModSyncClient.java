@@ -39,6 +39,7 @@ public class ModSyncClient implements ClientModInitializer {
     public void onInitializeClient() {
         ModSyncConfig config = ModSyncConfig.load();
         ModSync current = new ModSync(config);
+        current.cleanUp();
         sync = current;
         if (!config.manifestUrl.isBlank()) {
             Thread thread = new Thread(() -> {
