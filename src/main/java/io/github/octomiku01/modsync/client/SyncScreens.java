@@ -35,7 +35,7 @@ final class SyncScreens {
             SyncPlan plan = sync.plan();
             client.execute(() -> {
                 if (plan.isEmpty() && plan.skipped().isEmpty()) {
-                    client.gui.setScreen(new AlertScreen(() -> client.gui.setScreen(back), Component.translatable("modsync.plan.title"),
+                    client.gui.setScreen(new AlertScreen(() -> client.gui.setScreen(back), Component.translatable("modsync.settings.title"),
                             Component.translatable("modsync.plan.none")));
                 } else {
                     showPlan(client, back, sync, plan);
