@@ -51,7 +51,7 @@
 	"modsync.ignored.explanation": "Mods and files entered here are kept out of the sync on this computer: they are neither downloaded nor replaced nor removed, and they are not shown as differing. Useful for a mod you have your own version of, or a config you keep your own. Enter mod IDs, file names or paths like config/sodium-options.json (a folder takes in everything in it), separated by commas. This only applies to you, not to the shared list.",
 	"modsync.ignored.hint": "e.g. euphoria_patcher",
 	"modsync.ignored.suggestions": "Differed from the list last time: %s",
-	"modsync.skipped.changed": "(changed by you, yours stays)",
+	"modsync.skipped.changed": "(changed here, yours stays)",
 	"modsync.export.title": "Export mod list",
 	"modsync.export.explanation": "Writes the mods folder as a list to the folder modsync-export in the game folder: modpack.json and, in files, the other files the list brings along. Put both into the list's repo as they are. Enter the files and folders of the game folder that go with the list besides the mods, separated by commas. Resource and shader packs Modrinth hosts are downloaded from there. Check configs for passwords or tokens before sharing them.",
 	"modsync.export.paths": "Files and folders besides the mods",

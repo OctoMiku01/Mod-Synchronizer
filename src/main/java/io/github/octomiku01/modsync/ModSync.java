@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -170,9 +171,16 @@ public final class ModSync {
     public Export export(List<String> paths) throws IOException, InterruptedException {
         List<LocalMods.LocalMod> local = LocalMods.scan(modsFolder);
         Map<String, Manifest.Entry> known = modrinth.identify(local.stream().map(mod -> mod.hashes().get("sha512")).toList());
+        Map<String, Manifest.Entry> shared = sharedEntriesOfExceptions();
         List<Manifest.Entry> entries = new ArrayList<>();
         for (LocalMods.LocalMod mod : local) {
-            Manifest.Entry entry = known.get(mod.hashes().get("sha512"));
+            // A mod this installation keeps its own version of goes into the list as the list has it, not as it is here
+            Manifest.Entry entry = mod.modId() != null && config.ignoredMods.contains(mod.modId()) ? shared.get(mod.modId()) : null;
+            if (entry != null) {
+                entries.add(entry);
+                continue;
+            }
+            entry = known.get(mod.hashes().get("sha512"));
             if (entry == null) {
                 entry = gitHub.identify(mod);
             }
@@ -252,6 +260,24 @@ public final class ModSync {
         Files.writeString(out.resolve("modpack.json"),
                 new Manifest(minecraftVersion(), "fabric", entries, files.isEmpty() ? null : files).toJson(), StandardCharsets.UTF_8);
         return new Export(out, skipped);
+    }
+
+    /** The shared list's entries for the mods in this installation's exceptions, by mod ID; none if it cannot be read */
+    private Map<String, Manifest.Entry> sharedEntriesOfExceptions() throws InterruptedException {
+        Map<String, Manifest.Entry> entries = new HashMap<>();
+        if (config.ignoredMods.isEmpty() || config.manifestUrl.isBlank()) {
+            return entries;
+        }
+        try {
+            for (Manifest.Entry entry : Manifest.parse(ListLocation.parse(config.manifestUrl).read(http, gitHub)).mods()) {
+                if (entry.modId() != null && config.ignoredMods.contains(entry.modId())) {
+                    entries.put(entry.modId(), entry);
+                }
+            }
+        } catch (IOException | JsonParseException e) {
+            LOGGER.warn("Could not read the shared list, the exceptions go into the export as they are here: {}", e.toString());
+        }
+        return entries;
     }
 
     private static void deleteRecursively(Path folder) throws IOException {

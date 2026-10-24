@@ -51,7 +51,7 @@
 	"modsync.ignored.explanation": "Mods und Dateien, die hier stehen, lässt Mod Synchronizer auf diesem Rechner in Ruhe: Sie werden weder heruntergeladen noch ersetzt noch gelöscht und nicht als Abweichung angezeigt. Praktisch für eine Mod, von der du eine eigene Version hast, oder eine Config, die du selbst pflegst. Mod-IDs, Dateinamen oder Pfade wie config/sodium-options.json (ein Ordner schließt alles darin ein) durch Kommas getrennt eintragen. Das gilt nur für dich, nicht für die gemeinsame Liste.",
 	"modsync.ignored.hint": "z. B. euphoria_patcher",
 	"modsync.ignored.suggestions": "Beim letzten Abgleich abgewichen: %s",
-	"modsync.skipped.changed": "(von dir geändert, deine bleibt)",
+	"modsync.skipped.changed": "(hier geändert, deine bleibt)",
 	"modsync.export.title": "Modliste exportieren",
 	"modsync.export.explanation": "Schreibt den Mods-Ordner als Liste in den Ordner modsync-export im Spielordner: modpack.json und unter files die anderen Dateien, die die Liste mitbringt. Beides so, wie es ist, ins Repo der Liste legen. Trage die Dateien und Ordner des Spielordners ein, die neben den Mods zur Liste gehören, durch Kommas getrennt. Resource- und Shaderpacks, die es auf Modrinth gibt, werden von dort geladen. Prüfe Configs vor dem Teilen auf Passwörter oder Tokens.",
 	"modsync.export.paths": "Dateien und Ordner neben den Mods",

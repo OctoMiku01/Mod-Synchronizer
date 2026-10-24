@@ -18,8 +18,10 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param install files that are missing, or that the list has in a newer version the player has not changed
  * @param remove  paths of files this mod put there that the list no longer has, unchanged since
- * @param kept    files the player changed (or had before, like a config a mod made itself at its first start), which
- *                stay although the list has another version, unless the player chooses to replace them
+ * @param kept    files changed here (by the player, or by a mod at start) or had here before (like a config a mod
+ *                made itself at its first start), for which the list brings another version: they stay, unless the
+ *                player chooses to replace them. A file changed here while the list still has the version this mod put
+ *                there is no such case: there is nothing new to bring.
  * @param state   path to the hash of the version this mod put there, once the plan is carried out, as
  *                "algorithm:hex"; a file whose hash still matches it was not changed by the player
  */
@@ -69,9 +71,17 @@ public record FilePlan(List<Manifest.FileEntry> install, List<String> remove, Li
             } else if (installed != null && unchanged(installed, hashes)) {
                 install.add(entry);
                 state.put(entry.path(), stamp(entry.hashes()));
+            } else if (installed != null && installed.equals(stamp(entry.hashes()))) {
+                // Changed since this mod put it there, by the player or by a mod that writes its config anew at start,
+                // but the list still has the same version: nothing new to bring, so nothing to decide
+                state.put(entry.path(), installed);
             } else {
-                // Changed by the player, or theirs before the list had it: theirs stays, and is not tracked as ours
+                // The list brings a new version of a file that was changed here, or had here before the list had it:
+                // that one stays, unless the player chooses to replace it
                 kept.add(entry);
+                if (installed != null) {
+                    state.put(entry.path(), installed);
+                }
             }
         }
 
