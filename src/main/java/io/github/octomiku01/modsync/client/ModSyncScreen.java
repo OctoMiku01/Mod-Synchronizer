@@ -34,6 +34,8 @@ public final class ModSyncScreen extends Screen {
     private final @Nullable Screen parent;
     private final ModSync sync;
     private HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
+    private boolean shownBefore;
+    private boolean rebuild;
 
     public ModSyncScreen(@Nullable Screen parent, ModSync sync) {
         super(Component.translatable("modsync.settings.title"));
@@ -116,7 +118,23 @@ public final class ModSyncScreen extends Screen {
 
     @Override
     protected void repositionElements() {
+        if (rebuild) {
+            rebuild = false;
+            rebuildWidgets();
+            return;
+        }
         layout.arrangeElements();
+    }
+
+    /**
+     * Minecraft builds a screen only when it is first shown and just arranges it when it is shown again: back from a
+     * login or the export, what it shows (the login, the settings) may have changed since, so it is built anew
+     */
+    @Override
+    public void added() {
+        super.added();
+        rebuild = shownBefore;
+        shownBefore = true;
     }
 
     @Override

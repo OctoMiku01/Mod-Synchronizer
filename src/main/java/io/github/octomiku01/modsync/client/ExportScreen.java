@@ -33,6 +33,8 @@ final class ExportScreen extends Screen {
     private final ModSync sync;
     private HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
     private @Nullable EditBox paths;
+    private boolean shownBefore;
+    private boolean rebuild;
 
     ExportScreen(Screen parent, ModSync sync) {
         super(Component.translatable("modsync.export.title"));
@@ -69,7 +71,23 @@ final class ExportScreen extends Screen {
 
     @Override
     protected void repositionElements() {
+        if (rebuild) {
+            rebuild = false;
+            rebuildWidgets();
+            return;
+        }
         layout.arrangeElements();
+    }
+
+    /**
+     * Minecraft builds a screen only when it is first shown and just arranges it when it is shown again: back from the
+     * file browser, the field has to show what was chosen there, so it is built anew
+     */
+    @Override
+    public void added() {
+        super.added();
+        rebuild = shownBefore;
+        shownBefore = true;
     }
 
     @Override
