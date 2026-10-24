@@ -17,8 +17,10 @@ import org.jetbrains.annotations.Nullable;
  *                versions of the list's mods, by Fabric mod ID: Fabric does not start with two versions of one mod
  * @param skipped entries that cannot be installed, with the reason
  * @param state   the {@link SyncState} once the plan is carried out
+ * @param ignored the mod IDs and file names this installation keeps out of the sync: their jars are never removed
  */
-public record SyncPlan(List<Manifest.Entry> install, List<Path> remove, List<Skipped> skipped, Map<String, String> state) {
+public record SyncPlan(List<Manifest.Entry> install, List<Path> remove, List<Skipped> skipped, Map<String, String> state,
+                       Set<String> ignored) {
     public record Skipped(Manifest.Entry entry, Reason reason) {
     }
 
@@ -33,8 +35,12 @@ public record SyncPlan(List<Manifest.Entry> install, List<Path> remove, List<Ski
         return install.isEmpty() && remove.isEmpty();
     }
 
+    /**
+     * @param ignored mod IDs or file names this installation keeps out of the sync: their
+     *                entries are neither installed nor shown, and their jars are neither replaced nor removed
+     */
     public static SyncPlan compute(Manifest manifest, List<LocalMods.LocalMod> local, Map<String, String> oldState,
-                                   Manifest.Side here, Set<String> sources, Path modsFolder) {
+                                   Manifest.Side here, Set<String> sources, Set<String> ignored, Path modsFolder) {
         List<Manifest.Entry> install = new ArrayList<>();
         List<Path> remove = new ArrayList<>();
         List<Skipped> skipped = new ArrayList<>();
@@ -46,6 +52,14 @@ public record SyncPlan(List<Manifest.Entry> install, List<Path> remove, List<Ski
                 continue;
             }
             wanted.add(entry.key());
+            if (ignored.contains(entry.file()) || entry.modId() != null && ignored.contains(entry.modId())) {
+                // Whatever jar of it is there stays, and stays tracked if it was
+                @Nullable String old = oldState.get(entry.key());
+                if (old != null) {
+                    state.put(entry.key(), old);
+                }
+                continue;
+            }
             @Nullable LocalMods.LocalMod present = find(local, entry.hashes());
             if (present != null) {
                 // Also adopts a jar the player put there themselves: from now on it follows the list
@@ -81,7 +95,17 @@ public record SyncPlan(List<Manifest.Entry> install, List<Path> remove, List<Ski
                 add(remove, modsFolder.resolve(name));
             }
         }
-        return new SyncPlan(install, remove, skipped, state);
+        // Last, whatever the reason: a jar that is an exception stays, also one tracked under an entry the list dropped
+        remove.removeIf(file -> local.stream().anyMatch(mod -> mod.file().equals(file) && isIgnored(mod, ignored)));
+        return new SyncPlan(install, remove, skipped, state, ignored);
+    }
+
+    public boolean isIgnored(LocalMods.LocalMod mod) {
+        return isIgnored(mod, ignored);
+    }
+
+    private static boolean isIgnored(LocalMods.LocalMod mod, Set<String> ignored) {
+        return ignored.contains(mod.name()) || mod.modId() != null && ignored.contains(mod.modId());
     }
 
     /** Every jar of the mod but {@code keep}: an older one, or one a mod's own updater put there */

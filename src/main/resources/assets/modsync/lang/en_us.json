@@ -45,5 +45,10 @@
 	"modsync.settings.accessCode.hint": "The code you were given",
 	"modsync.settings.accessCode.use": "Use",
 	"modsync.settings.accessCode.checking": "Checking the access code with GitHub…",
-	"modsync.settings.accessCode.invalid": "GitHub does not accept this access code. It may be mistyped, expired or withdrawn: ask for a new one."
+	"modsync.settings.accessCode.invalid": "GitHub does not accept this access code. It may be mistyped, expired or withdrawn: ask for a new one.",
+	"modsync.settings.ignored": "Exceptions…",
+	"modsync.ignored.title": "Exceptions",
+	"modsync.ignored.explanation": "Mods entered here are kept out of the sync on this computer: they are neither downloaded nor replaced nor removed, and they are not shown as differing. Useful for a mod you have your own version of. Enter mod IDs (or file names), separated by commas. This only applies to you, not to the shared list.",
+	"modsync.ignored.hint": "e.g. euphoria_patcher",
+	"modsync.ignored.suggestions": "Differed from the list last time: %s"
 }

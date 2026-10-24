@@ -45,5 +45,10 @@
 	"modsync.settings.accessCode.hint": "Der Code, den du bekommen hast",
 	"modsync.settings.accessCode.use": "Verwenden",
 	"modsync.settings.accessCode.checking": "Prüfe den Zugangscode bei GitHub…",
-	"modsync.settings.accessCode.invalid": "GitHub akzeptiert diesen Zugangscode nicht. Vielleicht ist er falsch eingegeben, abgelaufen oder zurückgezogen: Frag nach einem neuen."
+	"modsync.settings.accessCode.invalid": "GitHub akzeptiert diesen Zugangscode nicht. Vielleicht ist er falsch eingegeben, abgelaufen oder zurückgezogen: Frag nach einem neuen.",
+	"modsync.settings.ignored": "Ausnahmen…",
+	"modsync.ignored.title": "Ausnahmen",
+	"modsync.ignored.explanation": "Mods, die hier stehen, lässt Mod Synchronizer auf diesem Rechner in Ruhe: Sie werden weder heruntergeladen noch ersetzt noch gelöscht und nicht als Abweichung angezeigt. Praktisch für eine Mod, von der du eine eigene Version hast. Mod-IDs (oder Dateinamen) durch Kommas getrennt eintragen. Das gilt nur für dich, nicht für die gemeinsame Liste.",
+	"modsync.ignored.hint": "z. B. euphoria_patcher",
+	"modsync.ignored.suggestions": "Beim letzten Abgleich abgewichen: %s"
 }

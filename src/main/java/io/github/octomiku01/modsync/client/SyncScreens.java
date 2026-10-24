@@ -33,6 +33,7 @@ final class SyncScreens {
         client.gui.setScreen(new GenericMessageScreen(Component.translatable("modsync.check.progress")));
         background("Mod Synchronizer check", client, back, sync, () -> {
             SyncPlan plan = sync.plan();
+            ModSyncClient.rememberPlan(plan);
             client.execute(() -> {
                 if (plan.isEmpty() && plan.skipped().isEmpty()) {
                     client.gui.setScreen(new AlertScreen(() -> client.gui.setScreen(back), Component.translatable("modsync.settings.title"),

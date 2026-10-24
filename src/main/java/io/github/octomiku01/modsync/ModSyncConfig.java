@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
@@ -20,6 +22,11 @@ public final class ModSyncConfig {
     public String manifestUrl = "";
     /** Which mods of the list this installation needs */
     public Manifest.Side side = Manifest.Side.CLIENT;
+    /**
+     * Mod IDs (or file names) this installation keeps out of the sync, like a mod of
+     * which the player has their own version
+     */
+    public List<String> ignoredMods = new ArrayList<>();
     /** The client ID of a GitHub App or OAuth app to log in through instead of the built-in one, with device flow on */
     public String githubClientId = "";
 

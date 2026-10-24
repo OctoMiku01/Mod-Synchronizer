@@ -27,6 +27,15 @@ public class ModSyncClient implements ClientModInitializer {
     private static volatile boolean loginNeeded;
     private static boolean shown;
 
+    /** The last comparison with the list, for the mod IDs the exceptions screen suggests */
+    static @Nullable SyncPlan lastPlan() {
+        return plan;
+    }
+
+    static void rememberPlan(SyncPlan latest) {
+        plan = latest;
+    }
+
     static ModSync sync() {
         ModSync current = sync;
         if (current == null) {

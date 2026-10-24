@@ -20,6 +20,10 @@ GitHub or enter an access code, compare with the list right away, or export the 
 
 Only jars this mod installed are ever replaced or removed (`.modsync/state.json`); your own mods stay untouched.
 
+"Exceptions…" in the settings keeps mods out of the sync on this computer, by mod ID or file name, like a mod you have
+your own version of: their list entries are neither downloaded nor shown as differing, and their jars are never
+replaced or removed. This is kept in `config/modsync.json` and does not change the shared list.
+
 "Export mod list" in the settings writes the current mods folder as a list to `modsync-export.json` in the game folder: jars Modrinth knows get their
 Modrinth entry, jars whose `fabric.mod.json` links a GitHub repo (`contact.sources`, `homepage` or `issues`) that has
 them as a release asset get a GitHub entry, the rest an entry with source `file` to fill in by hand. A fork whose

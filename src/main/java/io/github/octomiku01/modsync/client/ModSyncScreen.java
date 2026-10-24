@@ -101,7 +101,12 @@ public final class ModSyncScreen extends Screen {
         codeRow.addChild(Button.builder(Component.translatable("modsync.settings.accessCode.use"), button -> useAccessCode(code.getValue().strip()))
                 .width(80).build());
 
-        layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, button -> onClose()).width(200).build());
+        LinearLayout footer = layout.addToFooter(LinearLayout.horizontal().spacing(10));
+        footer.addChild(Button.builder(Component.translatable("modsync.settings.ignored"), button -> {
+            config.save();
+            minecraft.gui.setScreen(new IgnoredModsScreen(this, config));
+        }).width(HALF).build());
+        footer.addChild(Button.builder(CommonComponents.GUI_DONE, button -> onClose()).width(HALF).build());
         layout.visitWidgets(this::addRenderableWidget);
         repositionElements();
     }

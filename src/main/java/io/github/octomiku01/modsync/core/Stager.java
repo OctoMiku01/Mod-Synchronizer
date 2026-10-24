@@ -59,7 +59,8 @@ public final class Stager {
                 // The list did not say which mod this is, so the plan could not look for other versions of it
                 @Nullable String modId = LocalMods.modId(target);
                 for (Path jar : jars) {
-                    if (modId != null && !deletions.contains(jar) && modId.equals(LocalMods.modId(jar))) {
+                    if (modId != null && !deletions.contains(jar) && modId.equals(LocalMods.modId(jar))
+                            && !plan.ignored().contains(modId) && !plan.ignored().contains(jar.getFileName().toString())) {
                         deletions.add(jar);
                     }
                 }

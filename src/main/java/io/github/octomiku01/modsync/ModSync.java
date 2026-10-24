@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 import net.fabricmc.loader.api.FabricLoader;
@@ -79,7 +80,7 @@ public final class ModSync {
             throw new IOException("The mod list is for " + manifest.loader() + " " + manifest.minecraft() + ", this is fabric " + minecraft);
         }
         return SyncPlan.compute(manifest, LocalMods.scan(modsFolder), SyncState.load(stager.stateFile()), config.side,
-                sources.keySet(), modsFolder);
+                sources.keySet(), Set.copyOf(config.ignoredMods), modsFolder);
     }
 
     /**
