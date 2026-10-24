@@ -41,7 +41,8 @@ export screen takes the files and folders that go with the list, typed in (like 
 or picked in a file browser that also reaches into subfolders; packs
 Modrinth hosts get their Modrinth entry, everything else is copied into `modsync-export/files` under its path. Put
 the whole `modsync-export` folder into the list's repo: the files are read from the `files` folder next to
-`modpack.json`. This mod's own config never goes with the list. Check configs for passwords or tokens before sharing
+`modpack.json`. The export also writes a `.gitattributes` there that keeps Git from changing line endings, as the
+files have to stay byte for byte to match their hashes. This mod's own config never goes with the list. Check configs for passwords or tokens before sharing
 them.
 
 Players get a file when they do not have it, or when the version this mod put there is still unchanged. A file they

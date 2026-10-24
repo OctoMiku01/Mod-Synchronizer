@@ -185,6 +185,11 @@ public final class ModSync {
         Path out = gameFolder.resolve(MOD_ID + "-export");
         deleteRecursively(out);
         Files.createDirectories(out);
+        // Git on Windows turns line endings into Unix ones on commit by default, and the files would no longer match
+        // their hashes in the list: this tells Git to keep every file in the folder as it is
+        Files.writeString(out.resolve(".gitattributes"),
+                "# Keep every file byte for byte: Mod Synchronizer checks them against the hashes in the list\n* -text\n",
+                StandardCharsets.UTF_8);
         List<String> skipped = new ArrayList<>();
         Map<String, Path> found = new TreeMap<>();
         for (String path : paths) {
