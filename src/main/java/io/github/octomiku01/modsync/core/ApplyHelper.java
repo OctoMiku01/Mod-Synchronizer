@@ -9,6 +9,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -69,8 +70,9 @@ public final class ApplyHelper {
         if (!Files.isDirectory(folder)) {
             return;
         }
-        try (Stream<Path> files = Files.list(folder)) {
-            for (Path file : files.toList()) {
+        // Deepest first, so that the folders of the list's files go as well once they are empty
+        try (Stream<Path> files = Files.walk(folder)) {
+            for (Path file : files.filter(file -> !file.equals(folder)).sorted(Comparator.reverseOrder()).toList()) {
                 try {
                     Files.deleteIfExists(file);
                 } catch (IOException e) {
@@ -121,7 +123,12 @@ public final class ApplyHelper {
             try {
                 switch (parts[0]) {
                     case DELETE -> Files.deleteIfExists(Path.of(parts[1]));
-                    case MOVE -> Files.move(Path.of(parts[1]), Path.of(parts[2]), StandardCopyOption.REPLACE_EXISTING);
+                    case MOVE -> {
+                        Path target = Path.of(parts[2]);
+                        // A file of the list may go to a folder that is not there yet
+                        Files.createDirectories(target.getParent());
+                        Files.move(Path.of(parts[1]), target, StandardCopyOption.REPLACE_EXISTING);
+                    }
                     default -> throw new IOException("unknown step " + parts[0]);
                 }
                 return;

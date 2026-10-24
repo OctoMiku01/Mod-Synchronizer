@@ -70,7 +70,10 @@ public final class ModSyncScreen extends Screen {
                 SyncScreens.check(minecraft, this, sync);
             }
         }).width(HALF).build());
-        actions.addChild(Button.builder(Component.translatable("modsync.settings.export"), button -> export()).width(HALF).build());
+        actions.addChild(Button.builder(Component.translatable("modsync.settings.export"), button -> {
+            config.save();
+            minecraft.gui.setScreen(new ExportScreen(this, sync));
+        }).width(HALF).build());
 
         contents.addChild(label("modsync.settings.github"));
         boolean loggedIn = sync.gitHubAuth().loggedIn();
@@ -147,32 +150,4 @@ public final class ModSyncScreen extends Screen {
         thread.start();
     }
 
-    private void export() {
-        minecraft.gui.setScreen(new GenericMessageScreen(Component.translatable("modsync.export.started")));
-        Thread thread = new Thread(() -> {
-            Component message;
-            @Nullable Path written = null;
-            try {
-                written = sync.export();
-                message = Component.translatable("modsync.export.done", written.toString());
-            } catch (IOException | RuntimeException e) {
-                ModSync.LOGGER.error("Could not export the mod list", e);
-                message = Component.translatable("modsync.export.failed", String.valueOf(e.getMessage()));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-            Component shown = message;
-            @Nullable Path file = written;
-            minecraft.execute(() -> minecraft.gui.setScreen(new AlertScreen(() -> {
-                if (file != null) {
-                    Util.getPlatform().openPath(file.getParent());
-                }
-                minecraft.gui.setScreen(this);
-            }, Component.translatable("modsync.settings.export"), shown,
-                    file != null ? Component.translatable("modsync.export.openFolder") : CommonComponents.GUI_BACK, true)));
-        }, "Mod Synchronizer export");
-        thread.setDaemon(true);
-        thread.start();
-    }
 }

@@ -58,6 +58,18 @@ public final class GitHubSource implements ModSource {
 
     /** A file from a repo, like the shared list itself; {@code ref} is a branch, tag or commit, the default branch when null */
     public String file(String repo, String path, @Nullable String ref) throws IOException, InterruptedException {
+        return get(contents(repo, path, ref), "application/vnd.github.raw+json");
+    }
+
+    /** Where a file from a repo is downloaded from, like a config that goes with the list; up to 100 MB */
+    public Download fileDownload(String repo, String path, @Nullable String ref) throws IOException {
+        Map<String, String> headers = new HashMap<>(auth.headers());
+        headers.put("Accept", "application/vnd.github.raw+json");
+        headers.put("X-GitHub-Api-Version", "2022-11-28");
+        return new Download(URI.create(API + contents(repo, path, ref)), headers);
+    }
+
+    private static String contents(String repo, String path, @Nullable String ref) throws IOException {
         StringBuilder url = new StringBuilder("/repos/").append(repo(repo)).append("/contents");
         for (String part : path.split("/")) {
             if (!part.isEmpty()) {
@@ -67,7 +79,7 @@ public final class GitHubSource implements ModSource {
         if (ref != null) {
             url.append("?ref=").append(encode(ref));
         }
-        return get(url.toString(), "application/vnd.github.raw+json");
+        return url.toString();
     }
 
     /**

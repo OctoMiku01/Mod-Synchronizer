@@ -84,8 +84,10 @@ final class IgnoredModsScreen extends Screen {
         if (plan == null) {
             return List.of();
         }
-        return Stream.concat(plan.install().stream(), plan.skipped().stream().map(SyncPlan.Skipped::entry))
-                .map(IgnoredModsScreen::id)
+        Stream<String> mods = Stream.concat(plan.install().stream(), plan.skipped().stream().map(SyncPlan.Skipped::entry))
+                .map(IgnoredModsScreen::id);
+        Stream<String> files = Stream.concat(plan.files().install().stream().map(Manifest.FileEntry::path), plan.files().kept().stream().map(Manifest.FileEntry::path));
+        return Stream.concat(mods, files)
                 .filter(id -> !config.ignoredMods.contains(id))
                 .distinct().toList();
     }

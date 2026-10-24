@@ -5,7 +5,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -15,8 +17,9 @@ import org.jetbrains.annotations.Nullable;
  * @param minecraft the Minecraft version the list is for, like "26.2"
  * @param loader    always "fabric" for now
  * @param mods      the mods of the list
+ * @param files     other files of the game folder that go with the list, like configs; none when left out
  */
-public record Manifest(String minecraft, String loader, List<Entry> mods) {
+public record Manifest(String minecraft, String loader, List<Entry> mods, @Nullable List<FileEntry> files) {
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     /**
@@ -47,6 +50,42 @@ public record Manifest(String minecraft, String loader, List<Entry> mods) {
         }
     }
 
+    /**
+     * A file of the game folder outside the mods folder, like a config, a resource pack or a shader pack.
+     *
+     * @param path    where it goes, relative to the game folder, with "/" between folders, like "config/sodium-options.json"
+     * @param hashes  as for mods: a download must match them
+     * @param source  "modrinth" for a pack Modrinth hosts, else (left out) the file lies next to the list, in its
+     *                "files" folder under the same path
+     * @param project for Modrinth: the project id
+     * @param version for Modrinth: the version id
+     * @param file    for Modrinth: the file name of the version
+     */
+    public record FileEntry(String path, Map<String, String> hashes, @Nullable String source, @Nullable String project,
+                            @Nullable String version, @Nullable String file) {
+        /** Folders a list may never write into: the mods (they have their own entries), this mod's own, and the player's own data */
+        private static final Set<String> FORBIDDEN = Set.of("mods", ".modsync", "saves", "logs", "crash-reports", "screenshots",
+                "versions", "libraries", "assets", ".fabric");
+
+        /** Whether the list says where the file is: next to the list, or on Modrinth */
+        public boolean nextToList() {
+            return source == null;
+        }
+
+        /** Only plain relative paths inside the game folder, and none into the folders above */
+        public static void check(String path) {
+            String[] parts = path.split("/");
+            boolean valid = !path.isBlank() && !path.contains("\\") && !path.contains(":") && !path.startsWith("/")
+                    && !FORBIDDEN.contains(parts[0].toLowerCase(Locale.ROOT));
+            for (String part : parts) {
+                valid &= !part.isEmpty() && !part.equals(".") && !part.equals("..");
+            }
+            if (!valid) {
+                throw new JsonParseException("a file of the list may not go to " + path);
+            }
+        }
+    }
+
     public enum Side {
         @SerializedName("client") CLIENT,
         @SerializedName("server") SERVER,
@@ -61,6 +100,17 @@ public record Manifest(String minecraft, String loader, List<Entry> mods) {
         for (Entry entry : manifest.mods()) {
             if (entry.source() == null || entry.project() == null || entry.file() == null || entry.hashes() == null || entry.hashes().isEmpty()) {
                 throw new JsonParseException("an entry misses its source, project, file or hashes: " + entry);
+            }
+        }
+        if (manifest.files() != null) {
+            for (FileEntry file : manifest.files()) {
+                if (file.path() == null || file.hashes() == null || file.hashes().isEmpty()) {
+                    throw new JsonParseException("a file misses its path or hashes: " + file);
+                }
+                FileEntry.check(file.path());
+                if (!file.nextToList() && (file.project() == null || file.version() == null || file.file() == null)) {
+                    throw new JsonParseException("a file from " + file.source() + " misses its project, version or file: " + file);
+                }
             }
         }
         return manifest;

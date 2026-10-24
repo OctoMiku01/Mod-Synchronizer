@@ -46,19 +46,7 @@ final class SyncScreens {
     }
 
     static void showPlan(Minecraft client, @Nullable Screen back, ModSync sync, SyncPlan plan) {
-        if (plan.isEmpty()) {
-            client.gui.setScreen(new AlertScreen(() -> client.gui.setScreen(back), Component.translatable("modsync.plan.title"),
-                    describe(plan)));
-            return;
-        }
-        client.gui.setScreen(new ConfirmScreen(apply -> {
-            if (apply) {
-                download(client, back, sync, plan);
-            } else {
-                client.gui.setScreen(back);
-            }
-        }, Component.translatable("modsync.plan.title"), describe(plan),
-                Component.translatable("modsync.plan.apply"), Component.translatable("modsync.plan.later")));
+        client.gui.setScreen(new PlanScreen(back, plan, describe(plan), chosen -> download(client, back, sync, chosen)));
     }
 
     /**
@@ -157,6 +145,15 @@ final class SyncScreens {
         }
         for (Path old : plan.remove()) {
             lines.add(Component.literal("- " + old.getFileName()).withStyle(ChatFormatting.RED));
+        }
+        for (Manifest.FileEntry file : plan.files().install()) {
+            lines.add(Component.literal("+ " + file.path()).withStyle(ChatFormatting.GREEN));
+        }
+        for (String path : plan.files().remove()) {
+            lines.add(Component.literal("- " + path).withStyle(ChatFormatting.RED));
+        }
+        for (Manifest.FileEntry file : plan.files().kept()) {
+            lines.add(Component.literal("! " + file.path() + " ").withStyle(ChatFormatting.YELLOW).append(Component.translatable("modsync.skipped.changed")));
         }
         for (SyncPlan.Skipped skipped : plan.skipped()) {
             lines.add(Component.literal("! " + skipped.entry().file() + " ").withStyle(ChatFormatting.YELLOW)

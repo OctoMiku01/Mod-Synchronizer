@@ -18,9 +18,10 @@ import org.jetbrains.annotations.Nullable;
  * @param skipped entries that cannot be installed, with the reason
  * @param state   the {@link SyncState} once the plan is carried out
  * @param ignored the mod IDs and file names this installation keeps out of the sync: their jars are never removed
+ * @param files   what it takes to bring the list's other files in line, like configs
  */
 public record SyncPlan(List<Manifest.Entry> install, List<Path> remove, List<Skipped> skipped, Map<String, String> state,
-                       Set<String> ignored) {
+                       Set<String> ignored, FilePlan files) {
     public record Skipped(Manifest.Entry entry, Reason reason) {
     }
 
@@ -32,7 +33,16 @@ public record SyncPlan(List<Manifest.Entry> install, List<Path> remove, List<Ski
     }
 
     public boolean isEmpty() {
-        return install.isEmpty() && remove.isEmpty();
+        return install.isEmpty() && remove.isEmpty() && files.isEmpty();
+    }
+
+    /** Nothing in the list that this installation cannot have or keeps its own version of */
+    public boolean nothingSkipped() {
+        return skipped.isEmpty() && files.kept().isEmpty();
+    }
+
+    public SyncPlan withFiles(FilePlan newFiles) {
+        return new SyncPlan(install, remove, skipped, state, ignored, newFiles);
     }
 
     /**
@@ -97,7 +107,7 @@ public record SyncPlan(List<Manifest.Entry> install, List<Path> remove, List<Ski
         }
         // Last, whatever the reason: a jar that is an exception stays, also one tracked under an entry the list dropped
         remove.removeIf(file -> local.stream().anyMatch(mod -> mod.file().equals(file) && isIgnored(mod, ignored)));
-        return new SyncPlan(install, remove, skipped, state, ignored);
+        return new SyncPlan(install, remove, skipped, state, ignored, FilePlan.NONE);
     }
 
     public boolean isIgnored(LocalMods.LocalMod mod) {

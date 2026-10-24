@@ -27,6 +27,8 @@ public final class ModSyncConfig {
      * which the player has their own version
      */
     public List<String> ignoredMods = new ArrayList<>();
+    /** The files and folders of the game folder that an export puts into the list besides the mods, like "config" */
+    public List<String> exportPaths = new ArrayList<>();
     /** The client ID of a GitHub App or OAuth app to log in through instead of the built-in one, with device flow on */
     public String githubClientId = "";
 

@@ -1,9 +1,13 @@
 package io.github.octomiku01.modsync;
 
+import com.google.gson.JsonParseException;
 import io.github.octomiku01.modsync.core.ApplyHelper;
+import io.github.octomiku01.modsync.core.FilePlan;
 import io.github.octomiku01.modsync.core.GitHubAuth;
 import io.github.octomiku01.modsync.core.GitHubSource;
+import io.github.octomiku01.modsync.core.Hashes;
 import io.github.octomiku01.modsync.core.Http;
+import io.github.octomiku01.modsync.core.ListLocation;
 import io.github.octomiku01.modsync.core.LocalMods;
 import io.github.octomiku01.modsync.core.Manifest;
 import io.github.octomiku01.modsync.core.ModSource;
@@ -12,18 +16,21 @@ import io.github.octomiku01.modsync.core.Stager;
 import io.github.octomiku01.modsync.core.SyncPlan;
 import io.github.octomiku01.modsync.core.SyncState;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.fabricmc.loader.api.FabricLoader;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +43,8 @@ public final class ModSync {
      * the repos it is installed in. A client ID is public, only the (unused) secret and private key are not.
      */
     private static final String GITHUB_CLIENT_ID = "Iv23liXIgToUgiXmtnxw";
-    private static final String GITHUB_PREFIX = "github:";
+    /** GitHub takes files of up to 100 MB, and warns from 50 MB on */
+    private static final long MAX_EXPORT_FILE = 50L * 1024 * 1024;
 
     private final Http http = new Http(FabricLoader.getInstance().getModContainer(MOD_ID)
             .map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown"));
@@ -50,6 +58,8 @@ public final class ModSync {
     private final Path workFolder = gameFolder.resolve("." + MOD_ID);
     private final Stager stager = new Stager(http, sources, workFolder);
     private final ModSyncConfig config;
+    /** Where the list was read from last, which is also where its other files are */
+    private volatile @Nullable ListLocation listLocation;
 
     public ModSync(ModSyncConfig config) {
         this.config = config;
@@ -72,15 +82,19 @@ public final class ModSync {
         return config.githubClientId.isBlank() ? GITHUB_CLIENT_ID : config.githubClientId.strip();
     }
 
-    /** Fetches the list and compares it with the mods folder */
+    /** Fetches the list and compares it with the mods folder and the other files that go with it */
     public SyncPlan plan() throws IOException, InterruptedException {
-        Manifest manifest = Manifest.parse(fetchManifest());
+        ListLocation location = ListLocation.parse(config.manifestUrl);
+        Manifest manifest = Manifest.parse(location.read(http, gitHub));
         String minecraft = minecraftVersion();
         if (!minecraft.equals(manifest.minecraft()) || !"fabric".equals(manifest.loader())) {
             throw new IOException("The mod list is for " + manifest.loader() + " " + manifest.minecraft() + ", this is fabric " + minecraft);
         }
+        listLocation = location;
+        Set<String> ignored = Set.copyOf(config.ignoredMods);
         return SyncPlan.compute(manifest, LocalMods.scan(modsFolder), SyncState.load(stager.stateFile()), config.side,
-                sources.keySet(), Set.copyOf(config.ignoredMods), modsFolder);
+                        sources.keySet(), ignored, modsFolder)
+                .withFiles(FilePlan.compute(manifest.files(), gameFolder, SyncState.load(stager.filesStateFile()), ignored));
     }
 
     /**
@@ -110,26 +124,46 @@ public final class ModSync {
     }
 
     private static String skipped(SyncPlan plan) {
-        return plan.skipped().stream()
+        List<String> lines = plan.skipped().stream()
                 .map(skipped -> skipped.reason() + "\t" + skipped.entry().key() + "\t" + skipped.entry().file())
-                .sorted().collect(Collectors.joining("\n"));
+                .collect(Collectors.toCollection(ArrayList::new));
+        plan.files().kept().forEach(file -> lines.add("KEPT\t" + file.path()));
+        return lines.stream().sorted().collect(Collectors.joining("\n"));
     }
 
     /** Downloads the plan's jars and starts the helper that swaps them in once the game has exited */
     public void stage(SyncPlan plan, IntConsumer progress) throws IOException, InterruptedException {
-        Path steps = stager.stage(plan, modsFolder, progress);
+        @Nullable ListLocation location = listLocation;
+        if (location == null) {
+            throw new IllegalStateException("staged before the list was read");
+        }
+        Path steps = stager.stage(plan, modsFolder, gameFolder, file -> file.nextToList()
+                ? location.fileDownload(http, gitHub, file.path())
+                : modrinth.resolve(new Manifest.Entry(ModrinthSource.ID, file.project(), file.version(), file.file(), file.hashes(), null, null)),
+                progress);
         List<Path> classPath = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getOrigin().getPaths();
         ApplyHelper.launch(steps, classPath);
     }
 
     /**
-     * Writes the mods folder as a list to {@code modsync-export.json} in the game folder. Jars get their Modrinth
-     * entry if Modrinth knows them, else their GitHub entry if their fabric.mod.json links a repo that has them as a
-     * release asset; the others an entry with source "file" to fill in by hand.
+     * What an export wrote
      *
-     * @return the written file
+     * @param folder  the folder with the list and its files, to put into the list's repo as it is
+     * @param skipped the paths that were left out, with the reason
      */
-    public Path export() throws IOException, InterruptedException {
+    public record Export(Path folder, List<String> skipped) {
+    }
+
+    /**
+     * Writes the mods folder as a list, together with the given other files and folders of the game folder, to the
+     * folder {@code modsync-export} in the game folder: {@code modpack.json} and next to it a folder "files" with the
+     * files the list brings itself. Jars and packs get their Modrinth entry if Modrinth knows them; jars else their
+     * GitHub entry if their fabric.mod.json links a repo that has them as a release asset, or an entry with source
+     * "file" to fill in by hand. This mod's own config stays out: it holds the player's own settings.
+     *
+     * @param paths files and folders relative to the game folder, like "config" or "options.txt"
+     */
+    public Export export(List<String> paths) throws IOException, InterruptedException {
         List<LocalMods.LocalMod> local = LocalMods.scan(modsFolder);
         Map<String, Manifest.Entry> known = modrinth.identify(local.stream().map(mod -> mod.hashes().get("sha512")).toList());
         List<Manifest.Entry> entries = new ArrayList<>();
@@ -143,29 +177,70 @@ public final class ModSync {
             }
             entries.add(entry.withModId(mod.modId()));
         }
-        Path file = gameFolder.resolve(MOD_ID + "-export.json");
-        Files.writeString(file, new Manifest(minecraftVersion(), "fabric", entries).toJson(), StandardCharsets.UTF_8);
-        return file;
+
+        Path out = gameFolder.resolve(MOD_ID + "-export");
+        deleteRecursively(out);
+        Files.createDirectories(out);
+        List<String> skipped = new ArrayList<>();
+        Map<String, Path> found = new TreeMap<>();
+        for (String path : paths) {
+            String clean = path.strip().replace('\\', '/').replaceAll("/+$", "");
+            try {
+                Manifest.FileEntry.check(clean);
+            } catch (JsonParseException e) {
+                skipped.add(clean + " (" + e.getMessage() + ")");
+                continue;
+            }
+            Path source = gameFolder.resolve(clean);
+            if (!Files.exists(source)) {
+                skipped.add(clean + " (not there)");
+                continue;
+            }
+            try (Stream<Path> files = Files.walk(source)) {
+                for (Path file : files.filter(Files::isRegularFile).toList()) {
+                    found.put(gameFolder.relativize(file).toString().replace('\\', '/'), file);
+                }
+            }
+        }
+        found.remove("config/" + MOD_ID + ".json");
+
+        Map<String, Map<String, String>> hashes = new LinkedHashMap<>();
+        for (Map.Entry<String, Path> file : found.entrySet()) {
+            if (Files.size(file.getValue()) > MAX_EXPORT_FILE) {
+                // GitHub takes files of up to 100 MB, and warns from 50 MB on
+                skipped.add(file.getKey() + " (larger than 50 MB)");
+            } else {
+                hashes.put(file.getKey(), Hashes.of(file.getValue()));
+            }
+        }
+        Map<String, Manifest.Entry> knownPacks = modrinth.identify(hashes.entrySet().stream()
+                .filter(file -> file.getKey().endsWith(".zip")).map(file -> file.getValue().get("sha512")).toList());
+        List<Manifest.FileEntry> files = new ArrayList<>();
+        for (Map.Entry<String, Map<String, String>> file : hashes.entrySet()) {
+            Manifest.Entry pack = knownPacks.get(file.getValue().get("sha512"));
+            if (pack != null) {
+                files.add(new Manifest.FileEntry(file.getKey(), pack.hashes(), ModrinthSource.ID, pack.project(), pack.version(), pack.file()));
+            } else {
+                Path copy = out.resolve("files").resolve(file.getKey());
+                Files.createDirectories(copy.getParent());
+                Files.copy(found.get(file.getKey()), copy);
+                files.add(new Manifest.FileEntry(file.getKey(), file.getValue(), null, null, null, null));
+            }
+        }
+        Files.writeString(out.resolve("modpack.json"),
+                new Manifest(minecraftVersion(), "fabric", entries, files.isEmpty() ? null : files).toJson(), StandardCharsets.UTF_8);
+        return new Export(out, skipped);
     }
 
-    private String fetchManifest() throws IOException, InterruptedException {
-        String location = config.manifestUrl.strip();
-        if (!location.startsWith(GITHUB_PREFIX)) {
-            return http.get(URI.create(location), Map.of());
+    private static void deleteRecursively(Path folder) throws IOException {
+        if (!Files.exists(folder)) {
+            return;
         }
-        // github:owner/repo/path/to/list.json@branch
-        String rest = location.substring(GITHUB_PREFIX.length());
-        String ref = null;
-        int at = rest.lastIndexOf('@');
-        if (at >= 0) {
-            ref = rest.substring(at + 1);
-            rest = rest.substring(0, at);
+        try (Stream<Path> files = Files.walk(folder)) {
+            for (Path file : files.sorted(Comparator.reverseOrder()).toList()) {
+                Files.delete(file);
+            }
         }
-        String[] parts = rest.split("/", 3);
-        if (parts.length < 3) {
-            throw new IOException("Not a list in a GitHub repo, expected github:owner/repo/path: " + location);
-        }
-        return gitHub.file(parts[0] + "/" + parts[1], parts[2], ref);
     }
 
     private static String minecraftVersion() {

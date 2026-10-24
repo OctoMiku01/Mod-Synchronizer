@@ -24,7 +24,8 @@ Only jars this mod installed are ever replaced or removed (`.modsync/state.json`
 your own version of: their list entries are neither downloaded nor shown as differing, and their jars are never
 replaced or removed. This is kept in `config/modsync.json` and does not change the shared list.
 
-"Export mod list" in the settings writes the current mods folder as a list to `modsync-export.json` in the game folder: jars Modrinth knows get their
+"Export mod list" in the settings writes the current mods folder as a list to the folder `modsync-export` in the game
+folder, as `modpack.json`: jars Modrinth knows get their
 Modrinth entry, jars whose `fabric.mod.json` links a GitHub repo (`contact.sources`, `homepage` or `issues`) that has
 them as a release asset get a GitHub entry, the rest an entry with source `file` to fill in by hand. A fork whose
 contact links rightly point to the original can name its own repo in its `fabric.mod.json`:
@@ -32,6 +33,20 @@ contact links rightly point to the original can name its own repo in its `fabric
 ```json
 "custom": { "modsync": { "github": "owner/repo" } }
 ```
+
+## Other files
+
+Besides the mods, a list can bring other files of the game folder, like configs, resource packs or shader packs. The
+export screen takes the files and folders that go with the list (like `config, resourcepacks, shaderpacks`); packs
+Modrinth hosts get their Modrinth entry, everything else is copied into `modsync-export/files` under its path. Put
+the whole `modsync-export` folder into the list's repo: the files are read from the `files` folder next to
+`modpack.json`. This mod's own config never goes with the list. Check configs for passwords or tokens before sharing
+them.
+
+Players get a file when they do not have it, or when the version this mod put there is still unchanged. A file they
+changed, or had before (often a config a mod made itself at its first start), stays: the sync shows it with `!`, and
+"Download and replace your own" takes the list's version anyway. Files the list drops are removed if unchanged.
+Lists may only write into the game folder, never into `mods`, `saves`, `logs` or this mod's own `.modsync`.
 
 ## GitHub
 
@@ -68,6 +83,11 @@ GitHub App or OAuth app can be entered by its client ID in the settings.
       "side": "both",
       "modId": "fabric-api"
     }
+  ],
+  "files": [
+    { "path": "config/sodium-options.json", "hashes": { "sha512": "…" } },
+    { "path": "shaderpacks/ComplementaryReimagined_r5.5.zip", "hashes": { "sha512": "…" },
+      "source": "modrinth", "project": "HVnmMxH1", "version": "…", "file": "ComplementaryReimagined_r5.5.zip" }
   ]
 }
 ```
