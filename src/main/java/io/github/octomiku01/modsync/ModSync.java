@@ -197,7 +197,7 @@ public final class ModSync {
 
     /**
      * Writes the mods folder as a list, together with the given other files and folders of the game folder, to the
-     * folder {@code modsync-export} in the game folder: {@code modpack.json} and next to it a folder "files" with the
+     * export folder (see {@link #exportFolder}): {@code modpack.json} and next to it a folder "files" with the
      * files the list brings itself. Jars and packs get their Modrinth entry if Modrinth knows them; jars else their
      * GitHub entry if their fabric.mod.json links a repo that has them as a release asset, or an entry with source
      * "file" to fill in by hand. This mod's own config stays out: it holds the player's own settings.
@@ -226,9 +226,8 @@ public final class ModSync {
             entries.add(entry.withModId(mod.modId()));
         }
 
-        Path out = gameFolder.resolve(MOD_ID + "-export");
-        deleteRecursively(out);
-        Files.createDirectories(out);
+        Path out = exportFolder();
+        prepareExportFolder(out);
         // Git on Windows turns line endings into Unix ones on commit by default, and the files would no longer match
         // their hashes in the list: this tells Git to keep every file in the folder as it is
         Files.writeString(out.resolve(".gitattributes"),
@@ -314,6 +313,31 @@ public final class ModSync {
             LOGGER.warn("Could not read the shared list, the exceptions go into the export as they are here: {}", e.toString());
         }
         return entries;
+    }
+
+    /**
+     * Where the export goes: the folder set in the settings, like a local clone of the list's repo, or else
+     * {@code modsync-export} in the game folder
+     */
+    public Path exportFolder() {
+        return config.exportFolder.isBlank() ? gameFolder.resolve(MOD_ID + "-export") : Path.of(config.exportFolder.strip());
+    }
+
+    /**
+     * Clears what an earlier export wrote and leaves everything else, like a repo's .git and README. Only into an
+     * empty folder or one that already holds a list: anything else might be a folder that was picked by mistake.
+     */
+    private static void prepareExportFolder(Path out) throws IOException {
+        if (Files.isDirectory(out) && !Files.exists(out.resolve("modpack.json"))) {
+            try (Stream<Path> entries = Files.list(out)) {
+                if (entries.anyMatch(entry -> !entry.getFileName().toString().equals(".git"))) {
+                    throw new IOException("The export folder " + out + " is neither empty nor holds a list (modpack.json): pick an empty folder or the list's repo");
+                }
+            }
+        }
+        Files.createDirectories(out);
+        deleteRecursively(out.resolve("files"));
+        Files.deleteIfExists(out.resolve("modpack.json"));
     }
 
     private static void deleteRecursively(Path folder) throws IOException {

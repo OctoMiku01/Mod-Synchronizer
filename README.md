@@ -41,7 +41,9 @@ export screen takes the files and folders that go with the list, typed in (like 
 or picked in a file browser that also reaches into subfolders; packs
 Modrinth hosts get their Modrinth entry, everything else is copied into `modsync-export/files` under its path. Put
 the whole `modsync-export` folder into the list's repo: the files are read from the `files` folder next to
-`modpack.json`. The export also writes a `.gitattributes` there that keeps Git from changing line endings, as the
+`modpack.json`. Or set "Export to" on the export screen to a local clone of the list's repo: the export then
+replaces only `modpack.json`, `.gitattributes` and `files` there and leaves `.git` and everything else, so it only
+needs a commit and a push. It only exports into an empty folder or one that already holds a `modpack.json`. The export also writes a `.gitattributes` there that keeps Git from changing line endings, as the
 files have to stay byte for byte to match their hashes. This mod's own config never goes with the list. Check configs for passwords or tokens before sharing
 them.
 

@@ -53,7 +53,7 @@
 	"modsync.ignored.suggestions": "Differed from the list last time: %s",
 	"modsync.skipped.changed": "(changed here, yours stays)",
 	"modsync.export.title": "Export mod list",
-	"modsync.export.explanation": "Writes the mods folder as a list to the folder modsync-export in the game folder: modpack.json and, in files, the other files the list brings along. Put both into the list's repo as they are. Enter the files and folders of the game folder that go with the list besides the mods, separated by commas. Resource and shader packs Modrinth hosts are downloaded from there. Check configs for passwords or tokens before sharing them.",
+	"modsync.export.explanation": "Writes the mods folder as a list: modpack.json and, in files, the other files the list brings along. Export straight into a local clone of the list's repo, or put the folder there yourself; only modpack.json, .gitattributes and files are replaced there. Choose the files and folders of the game folder that go with the list besides the mods. Resource and shader packs Modrinth hosts are downloaded from there. Check configs for passwords or tokens before sharing them.",
 	"modsync.export.paths": "Files and folders besides the mods",
 	"modsync.export.paths.hint": "e.g. config, resourcepacks, shaderpacks",
 	"modsync.export.run": "Export",
@@ -66,5 +66,9 @@
 	"modsync.applyFailed.title": "Mod Synchronizer: the last sync did not get through",
 	"modsync.applyFailed.message": "When the game last exited, these files could not be put in place, mostly because another program held them open (a virus scanner, or a second Minecraft). Try again when the game exits now, or give up and compare with the list anew?",
 	"modsync.applyFailed.retry": "Try again at exit",
-	"modsync.applyFailed.discard": "Compare anew"
+	"modsync.applyFailed.discard": "Compare anew",
+	"modsync.export.folder": "Export to",
+	"modsync.export.folder.hint": "Empty: modsync-export in the game folder",
+	"modsync.export.folder.pick": "Choose…",
+	"modsync.export.gitHint": "It is a Git repo: commit and push the changes to share them."
 }

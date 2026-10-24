@@ -3,6 +3,7 @@ package io.github.octomiku01.modsync.client;
 import io.github.octomiku01.modsync.ModSync;
 import io.github.octomiku01.modsync.ModSyncConfig;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -11,6 +12,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
+import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.AlertScreen;
@@ -20,6 +22,7 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 /**
  * Exports the mods folder as a list, with the other files and folders of the game folder that should go with it,
@@ -62,6 +65,15 @@ final class ExportScreen extends Screen {
                 sync.config().save();
             }));
         }).width(WIDTH).build());
+
+        contents.addChild(new StringWidget(WIDTH, 12, Component.translatable("modsync.export.folder"), font));
+        LinearLayout folderRow = contents.addChild(LinearLayout.horizontal().spacing(10));
+        EditBox folderBox = folderRow.addChild(new EditBox(font, WIDTH - 90, 20, Component.translatable("modsync.export.folder")));
+        folderBox.setMaxLength(1024);
+        folderBox.setValue(sync.config().exportFolder);
+        folderBox.setHint(Component.translatable("modsync.export.folder.hint").withStyle(ChatFormatting.DARK_GRAY));
+        folderBox.setResponder(value -> sync.config().exportFolder = value.strip());
+        folderRow.addChild(Button.builder(Component.translatable("modsync.export.folder.pick"), button -> pickFolder(folderBox)).width(80).build());
 
         LinearLayout footer = layout.addToFooter(LinearLayout.horizontal().spacing(10));
         footer.addChild(Button.builder(Component.translatable("modsync.export.run"), button -> export()).width(HALF).build());
@@ -107,6 +119,22 @@ final class ExportScreen extends Screen {
         }
     }
 
+    /** The system's own folder dialog, off the game thread so that the game does not freeze while it is open */
+    private void pickFolder(EditBox folderBox) {
+        String start = sync.exportFolder().toAbsolutePath().toString();
+        Thread thread = new Thread(() -> {
+            @Nullable String picked = TinyFileDialogs.tinyfd_selectFolderDialog(Component.translatable("modsync.export.folder").getString(), start);
+            if (picked != null) {
+                minecraft.execute(() -> {
+                    sync.config().exportFolder = picked;
+                    folderBox.setValue(picked);
+                });
+            }
+        }, "Mod Synchronizer folder dialog");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
     private void export() {
         remember();
         minecraft.gui.setScreen(new GenericMessageScreen(Component.translatable("modsync.export.started")));
@@ -116,6 +144,9 @@ final class ExportScreen extends Screen {
             try {
                 written = sync.export(sync.config().exportPaths);
                 message = Component.translatable("modsync.export.done", written.folder().toString());
+                if (Files.isDirectory(written.folder().resolve(".git"))) {
+                    message = message.copy().append("\n").append(Component.translatable("modsync.export.gitHint"));
+                }
                 if (!written.skipped().isEmpty()) {
                     message = message.copy().append("\n\n").append(Component.translatable("modsync.export.skipped",
                             String.join(", ", written.skipped())).withStyle(ChatFormatting.YELLOW));

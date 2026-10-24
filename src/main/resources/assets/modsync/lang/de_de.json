@@ -53,7 +53,7 @@
 	"modsync.ignored.suggestions": "Beim letzten Abgleich abgewichen: %s",
 	"modsync.skipped.changed": "(hier geändert, deine bleibt)",
 	"modsync.export.title": "Modliste exportieren",
-	"modsync.export.explanation": "Schreibt den Mods-Ordner als Liste in den Ordner modsync-export im Spielordner: modpack.json und unter files die anderen Dateien, die die Liste mitbringt. Beides so, wie es ist, ins Repo der Liste legen. Trage die Dateien und Ordner des Spielordners ein, die neben den Mods zur Liste gehören, durch Kommas getrennt. Resource- und Shaderpacks, die es auf Modrinth gibt, werden von dort geladen. Prüfe Configs vor dem Teilen auf Passwörter oder Tokens.",
+	"modsync.export.explanation": "Schreibt den Mods-Ordner als Liste: modpack.json und unter files die anderen Dateien, die die Liste mitbringt. Exportiere direkt in einen lokalen Klon des Listen-Repos oder lege den Ordner selbst hinein; dort werden nur modpack.json, .gitattributes und files ersetzt. Wähle die Dateien und Ordner des Spielordners, die neben den Mods zur Liste gehören. Resource- und Shaderpacks, die es auf Modrinth gibt, werden von dort geladen. Prüfe Configs vor dem Teilen auf Passwörter oder Tokens.",
 	"modsync.export.paths": "Dateien und Ordner neben den Mods",
 	"modsync.export.paths.hint": "z. B. config, resourcepacks, shaderpacks",
 	"modsync.export.run": "Exportieren",
@@ -66,5 +66,9 @@
 	"modsync.applyFailed.title": "Mod Synchronizer: Der letzte Abgleich ist nicht durchgelaufen",
 	"modsync.applyFailed.message": "Beim letzten Beenden konnten diese Dateien nicht eingespielt werden, meist weil ein anderes Programm sie offen hielt (ein Virenscanner oder ein zweites Minecraft). Beim jetzigen Beenden erneut versuchen, oder verwerfen und neu mit der Liste vergleichen?",
 	"modsync.applyFailed.retry": "Beim Beenden erneut versuchen",
-	"modsync.applyFailed.discard": "Neu vergleichen"
+	"modsync.applyFailed.discard": "Neu vergleichen",
+	"modsync.export.folder": "Exportieren nach",
+	"modsync.export.folder.hint": "Leer: modsync-export im Spielordner",
+	"modsync.export.folder.pick": "Wählen…",
+	"modsync.export.gitHint": "Das ist ein Git-Repo: Committe und pushe die Änderungen, um sie zu teilen."
 }
