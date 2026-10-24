@@ -30,7 +30,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Picks the files and folders of the game folder that go with the list, also in subfolders: a click on a folder's
  * name opens it, the box in front of a name takes it in or leaves it out. A folder that is taken in takes in
- * everything in it; a box with "-" has some of its contents taken in.
+ * everything in it, and leaving out something in it leaves out just that; a box with "-" has some of its contents
+ * taken in.
  */
 final class FileBrowserScreen extends Screen {
     /** Folders a list may not write into, or that are no use to share: not shown at all */
@@ -144,9 +145,7 @@ final class FileBrowserScreen extends Screen {
     private void toggle(String path) {
         switch (state(path)) {
             case SELECTED -> selected.remove(path);
-            case IMPLIED -> {
-                // Taken in with its folder: leaving it out alone would need the folder split up, so the box stays
-            }
+            case IMPLIED -> leaveOut(path);
             default -> {
                 // A folder takes in everything in it: what was chosen inside it is part of it now
                 selected.removeIf(other -> other.startsWith(path + "/"));
@@ -155,6 +154,29 @@ final class FileBrowserScreen extends Screen {
         }
         if (list != null) {
             list.children().forEach(Row::update);
+        }
+    }
+
+    /**
+     * Leaves out one file or folder of a folder that is taken in as a whole: the folder is split up on the way down to
+     * it, into everything next to that way, so that all else stays taken in
+     */
+    private void leaveOut(String path) {
+        String folderTaken = parentOf(path);
+        while (!selected.contains(folderTaken)) {
+            folderTaken = parentOf(folderTaken);
+        }
+        selected.remove(folderTaken);
+        for (String current = folderTaken; !current.equals(path); ) {
+            int slash = path.indexOf('/', current.length() + 1);
+            String next = slash < 0 ? path : path.substring(0, slash);
+            for (Path child : entries(current)) {
+                String childPath = relative(child);
+                if (!childPath.equals(next)) {
+                    selected.add(childPath);
+                }
+            }
+            current = next;
         }
     }
 
@@ -228,7 +250,6 @@ final class FileBrowserScreen extends Screen {
                 case PARTIAL -> Component.literal("-").withStyle(ChatFormatting.YELLOW);
                 case NONE -> Component.empty();
             });
-            box.active = state != State.IMPLIED;
         }
 
         @Override
