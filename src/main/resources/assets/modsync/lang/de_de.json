@@ -5,7 +5,7 @@
 	"modsync.plan.more": "… und %s weitere",
 	"modsync.skipped.unsupported_source": "(Quelle %s wird noch nicht unterstützt)",
 	"modsync.skipped.file_name_taken": "(eine andere JAR mit diesem Namen liegt im Mods-Ordner)",
-	"modsync.download.progress": "Lade Mods herunter: %s von %s",
+	"modsync.download.progress": "Lade herunter: %s von %s",
 	"modsync.download.failed": "Die Mods konnten nicht heruntergeladen werden",
 	"modsync.done.title": "Mods heruntergeladen",
 	"modsync.done.message": "Der Mods-Ordner wird aktualisiert, sobald das Spiel geschlossen ist. Starte es danach neu.",

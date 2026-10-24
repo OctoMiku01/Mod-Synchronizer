@@ -5,7 +5,7 @@
 	"modsync.plan.more": "… and %s more",
 	"modsync.skipped.unsupported_source": "(source %s is not supported yet)",
 	"modsync.skipped.file_name_taken": "(a different jar of that name is in the mods folder)",
-	"modsync.download.progress": "Downloading mods: %s of %s",
+	"modsync.download.progress": "Downloading: %s of %s",
 	"modsync.download.failed": "Could not download the mods",
 	"modsync.done.title": "Mods downloaded",
 	"modsync.done.message": "The mods folder is updated as soon as the game is closed. Start it again afterwards.",

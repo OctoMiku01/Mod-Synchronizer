@@ -98,7 +98,7 @@ final class SyncScreens {
     }
 
     private static void download(Minecraft client, @Nullable Screen back, ModSync sync, SyncPlan plan) {
-        int total = plan.install().size();
+        int total = plan.install().size() + plan.files().install().size();
         client.gui.setScreen(new GenericMessageScreen(Component.translatable("modsync.download.progress", 0, total)));
         background("Mod Synchronizer download", client, back, sync, () -> {
             sync.stage(plan, done -> client.execute(() ->
