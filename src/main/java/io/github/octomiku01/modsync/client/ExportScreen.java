@@ -50,7 +50,8 @@ final class ExportScreen extends Screen {
         contents.addChild(new MultiLineTextWidget(Component.translatable("modsync.export.explanation"), font).setMaxWidth(WIDTH));
 
         EditBox box = contents.addChild(new EditBox(font, WIDTH, 20, Component.translatable("modsync.export.paths")));
-        box.setMaxLength(4096);
+        // A folder split up in the file browser can make for hundreds of paths
+        box.setMaxLength(1 << 16);
         box.setValue(String.join(", ", sync.config().exportPaths));
         box.setHint(Component.translatable("modsync.export.paths.hint").withStyle(ChatFormatting.DARK_GRAY));
         paths = box;
