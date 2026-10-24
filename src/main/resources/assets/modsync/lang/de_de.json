@@ -62,5 +62,9 @@
 	"modsync.export.browse": "Dateien und Ordner auswählen…",
 	"modsync.browse.title": "Dateien und Ordner auswählen",
 	"modsync.browse.gameFolder": "Spielordner",
-	"modsync.browse.up": "Nach oben"
+	"modsync.browse.up": "Nach oben",
+	"modsync.applyFailed.title": "Mod Synchronizer: Der letzte Abgleich ist nicht durchgelaufen",
+	"modsync.applyFailed.message": "Beim letzten Beenden konnten diese Dateien nicht eingespielt werden, meist weil ein anderes Programm sie offen hielt (ein Virenscanner oder ein zweites Minecraft). Beim jetzigen Beenden erneut versuchen, oder verwerfen und neu mit der Liste vergleichen?",
+	"modsync.applyFailed.retry": "Beim Beenden erneut versuchen",
+	"modsync.applyFailed.discard": "Neu vergleichen"
 }

@@ -62,5 +62,9 @@
 	"modsync.export.browse": "Choose files and folders…",
 	"modsync.browse.title": "Choose files and folders",
 	"modsync.browse.gameFolder": "Game folder",
-	"modsync.browse.up": "Up"
+	"modsync.browse.up": "Up",
+	"modsync.applyFailed.title": "Mod Synchronizer: the last sync did not get through",
+	"modsync.applyFailed.message": "When the game last exited, these files could not be put in place, mostly because another program held them open (a virus scanner, or a second Minecraft). Try again when the game exits now, or give up and compare with the list anew?",
+	"modsync.applyFailed.retry": "Try again at exit",
+	"modsync.applyFailed.discard": "Compare anew"
 }

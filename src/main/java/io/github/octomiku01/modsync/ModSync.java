@@ -71,6 +71,32 @@ public final class ModSync {
         ApplyHelper.cleanUp(workFolder);
     }
 
+    /** The files the helper could not put in place when the game last exited; none if it got through */
+    public List<String> failedApply() {
+        try {
+            Path file = workFolder.resolve(ApplyHelper.FAILED);
+            return Files.exists(file) ? Files.readAllLines(file, StandardCharsets.UTF_8) : List.of();
+        } catch (IOException e) {
+            return List.of();
+        }
+    }
+
+    /** Tries the steps left from the last exit again at this one */
+    public void retryApply() throws IOException {
+        Files.deleteIfExists(workFolder.resolve(ApplyHelper.FAILED));
+        ApplyHelper.launch(workFolder.resolve("pending.txt"), classPath());
+    }
+
+    /** Gives up on the steps left from the last exit: the next comparison with the list brings what is still missing */
+    public void discardApply() throws IOException {
+        Files.deleteIfExists(workFolder.resolve(ApplyHelper.FAILED));
+        Files.deleteIfExists(workFolder.resolve("pending.txt"));
+    }
+
+    private static List<Path> classPath() {
+        return FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getOrigin().getPaths();
+    }
+
     public Path gameFolder() {
         return gameFolder;
     }
@@ -155,8 +181,9 @@ public final class ModSync {
                 return location.archive(gitHub);
             }
         }, progress);
-        List<Path> classPath = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getOrigin().getPaths();
-        ApplyHelper.launch(steps, classPath);
+        // A new attempt: what the last one could not do is part of this plan, if it is still needed
+        Files.deleteIfExists(workFolder.resolve(ApplyHelper.FAILED));
+        ApplyHelper.launch(steps, classPath());
     }
 
     /**

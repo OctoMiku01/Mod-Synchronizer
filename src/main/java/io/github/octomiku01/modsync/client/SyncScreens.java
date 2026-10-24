@@ -45,6 +45,36 @@ final class SyncScreens {
         }, () -> check(client, back, sync), "modsync.check.failed");
     }
 
+    /**
+     * Tells that the last sync could not put some files in place when the game exited, mostly because another program
+     * held them open, and offers to try again at this exit or to give up and compare with the list anew
+     */
+    static void applyFailed(Minecraft client, @Nullable Screen back, ModSync sync, List<String> files) {
+        MutableComponent names = Component.empty();
+        for (int i = 0; i < Math.min(files.size(), MAX_LINES); i++) {
+            names.append(i == 0 ? Component.empty() : Component.literal("\n")).append(Component.literal(files.get(i)).withStyle(ChatFormatting.YELLOW));
+        }
+        if (files.size() > MAX_LINES) {
+            names.append("\n").append(Component.translatable("modsync.plan.more", files.size() - MAX_LINES));
+        }
+        client.gui.setScreen(new ConfirmScreen(retry -> {
+            try {
+                if (retry) {
+                    sync.retryApply();
+                    client.gui.setScreen(back);
+                } else {
+                    sync.discardApply();
+                    check(client, back, sync);
+                }
+            } catch (IOException e) {
+                ModSync.LOGGER.error("Could not deal with the steps left from the last sync", e);
+                client.gui.setScreen(back);
+            }
+        }, Component.translatable("modsync.applyFailed.title"),
+                Component.translatable("modsync.applyFailed.message").append("\n\n").append(names),
+                Component.translatable("modsync.applyFailed.retry"), Component.translatable("modsync.applyFailed.discard")));
+    }
+
     static void showPlan(Minecraft client, @Nullable Screen back, ModSync sync, SyncPlan plan) {
         client.gui.setScreen(new PlanScreen(back, plan, describe(plan), chosen -> download(client, back, sync, chosen)));
     }

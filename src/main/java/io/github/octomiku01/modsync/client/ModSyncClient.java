@@ -5,6 +5,7 @@ import io.github.octomiku01.modsync.ModSyncConfig;
 import io.github.octomiku01.modsync.core.GitHubAuth;
 import io.github.octomiku01.modsync.core.SyncPlan;
 import java.io.IOException;
+import java.util.List;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
@@ -25,6 +26,8 @@ public class ModSyncClient implements ClientModInitializer {
     private static @Nullable ModSync sync;
     private static volatile @Nullable SyncPlan plan;
     private static volatile boolean loginNeeded;
+    /** The files the last sync could not put in place, read at start */
+    private static List<String> failedApply = List.of();
     private static boolean shown;
 
     /** The last comparison with the list, for the mod IDs the exceptions screen suggests */
@@ -50,7 +53,11 @@ public class ModSyncClient implements ClientModInitializer {
         ModSync current = new ModSync(config);
         current.cleanUp();
         sync = current;
-        if (!config.manifestUrl.isBlank()) {
+        failedApply = current.failedApply();
+        if (!failedApply.isEmpty()) {
+            ModSync.LOGGER.warn("The last sync could not put {} files in place, see .modsync/apply.log", failedApply.size());
+            ClientTickEvents.END_CLIENT_TICK.register(ModSyncClient::tick);
+        } else if (!config.manifestUrl.isBlank()) {
             Thread thread = new Thread(() -> {
                 try {
                     plan = current.plan();
@@ -81,12 +88,15 @@ public class ModSyncClient implements ClientModInitializer {
         @Nullable SyncPlan current = plan;
         boolean login = loginNeeded;
         // Not while the game still loads: the loading overlay lies over a title screen that is set again after it
-        if (shown || (current == null && !login) || sync == null || !client.isGameLoadFinished() || client.gui == null
-                || client.gui.overlay() != null || !(client.gui.screen() instanceof TitleScreen title)) {
+        if (shown || (current == null && !login && failedApply.isEmpty()) || sync == null || !client.isGameLoadFinished()
+                || client.gui == null || client.gui.overlay() != null || !(client.gui.screen() instanceof TitleScreen title)) {
             return;
         }
         shown = true;
-        if (login) {
+        if (!failedApply.isEmpty()) {
+            // Before anything else: the mods folder is only partly what the last sync meant it to be
+            SyncScreens.applyFailed(client, title, sync, failedApply);
+        } else if (login) {
             ModSync currentSync = sync;
             SyncScreens.login(client, title, currentSync, () -> SyncScreens.check(client, title, currentSync));
         } else if (current.isEmpty() && (current.nothingSkipped() || sync.skippedShownBefore(current))) {

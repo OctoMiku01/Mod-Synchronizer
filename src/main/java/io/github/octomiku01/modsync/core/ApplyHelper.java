@@ -22,6 +22,8 @@ import java.util.stream.Stream;
 public final class ApplyHelper {
     static final String DELETE = "DELETE";
     static final String MOVE = "MOVE";
+    /** Names the files the last attempt could not put in place, one per line; there only while some are left */
+    public static final String FAILED = "apply-failed.txt";
     /** A jar can stay locked for a moment after the game has exited, by a virus scanner for example */
     private static final int ATTEMPTS = 60;
 
@@ -100,20 +102,26 @@ public final class ApplyHelper {
             try (Stream<String> lines = Files.lines(stepsFile, StandardCharsets.UTF_8)) {
                 steps = lines.filter(line -> !line.isBlank()).toList();
             }
-            boolean failed = false;
+            List<String> failed = new ArrayList<>();
             for (String step : steps) {
                 try {
                     run(step);
                     out.println("done: " + step);
                 } catch (IOException e) {
-                    failed = true;
+                    String[] parts = step.split("\t");
+                    failed.add(Path.of(parts[parts.length - 1]).getFileName().toString());
                     out.println("FAILED: " + step + " (" + e + ")");
                 }
             }
-            if (!failed) {
+            // The game reads this at its next start, to tell the player and offer to try again
+            Path failedFile = stepsFile.resolveSibling(FAILED);
+            if (failed.isEmpty()) {
                 Files.deleteIfExists(stepsFile);
+                Files.deleteIfExists(failedFile);
+            } else {
+                Files.write(failedFile, failed, StandardCharsets.UTF_8);
             }
-            out.println(LocalDateTime.now() + (failed ? " finished with errors" : " finished"));
+            out.println(LocalDateTime.now() + (failed.isEmpty() ? " finished" : " finished with errors"));
         }
     }
 
@@ -125,6 +133,10 @@ public final class ApplyHelper {
                     case DELETE -> Files.deleteIfExists(Path.of(parts[1]));
                     case MOVE -> {
                         Path target = Path.of(parts[2]);
+                        if (!Files.exists(Path.of(parts[1])) && Files.exists(target)) {
+                            // Moved in an earlier attempt that did not get through all steps
+                            return;
+                        }
                         // A file of the list may go to a folder that is not there yet
                         Files.createDirectories(target.getParent());
                         Files.move(Path.of(parts[1]), target, StandardCopyOption.REPLACE_EXISTING);
