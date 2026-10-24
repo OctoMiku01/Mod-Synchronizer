@@ -210,11 +210,19 @@ public final class ModSync {
 
         Map<String, Map<String, String>> hashes = new LinkedHashMap<>();
         for (Map.Entry<String, Path> file : found.entrySet()) {
-            if (Files.size(file.getValue()) > MAX_EXPORT_FILE) {
+            if (file.getKey().endsWith(".lock")) {
+                // Marks that a mod is running, nothing to share
+                skipped.add(file.getKey() + " (lock file)");
+            } else if (Files.size(file.getValue()) > MAX_EXPORT_FILE) {
                 // GitHub takes files of up to 100 MB, and warns from 50 MB on
                 skipped.add(file.getKey() + " (larger than 50 MB)");
             } else {
-                hashes.put(file.getKey(), Hashes.of(file.getValue()));
+                try {
+                    hashes.put(file.getKey(), Hashes.of(file.getValue()));
+                } catch (IOException e) {
+                    // A mod keeps it open while the game runs, like a database
+                    skipped.add(file.getKey() + " (in use, could not be read)");
+                }
             }
         }
         Map<String, Manifest.Entry> knownPacks = modrinth.identify(hashes.entrySet().stream()
@@ -227,7 +235,12 @@ public final class ModSync {
             } else {
                 Path copy = out.resolve("files").resolve(file.getKey());
                 Files.createDirectories(copy.getParent());
-                Files.copy(found.get(file.getKey()), copy);
+                try {
+                    Files.copy(found.get(file.getKey()), copy);
+                } catch (IOException e) {
+                    skipped.add(file.getKey() + " (in use, could not be read)");
+                    continue;
+                }
                 files.add(new Manifest.FileEntry(file.getKey(), file.getValue(), null, null, null, null));
             }
         }
