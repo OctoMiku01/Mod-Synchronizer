@@ -142,10 +142,19 @@ public final class ModSync {
         if (location == null) {
             throw new IllegalStateException("staged before the list was read");
         }
-        Path steps = stager.stage(plan, modsFolder, gameFolder, file -> file.nextToList()
-                ? location.fileDownload(http, gitHub, file.path())
-                : modrinth.resolve(new Manifest.Entry(ModrinthSource.ID, file.project(), file.version(), file.file(), file.hashes(), null, null)),
-                progress);
+        Path steps = stager.stage(plan, modsFolder, gameFolder, new Stager.FileResolver() {
+            @Override
+            public ModSource.Download resolve(Manifest.FileEntry file) throws IOException, InterruptedException {
+                return file.nextToList()
+                        ? location.fileDownload(http, gitHub, file.path())
+                        : modrinth.resolve(new Manifest.Entry(ModrinthSource.ID, file.project(), file.version(), file.file(), file.hashes(), null, null));
+            }
+
+            @Override
+            public @Nullable ListLocation.Archive archive() throws IOException {
+                return location.archive(gitHub);
+            }
+        }, progress);
         List<Path> classPath = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getOrigin().getPaths();
         ApplyHelper.launch(steps, classPath);
     }

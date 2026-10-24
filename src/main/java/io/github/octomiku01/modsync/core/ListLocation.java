@@ -25,9 +25,32 @@ public sealed interface ListLocation {
 
         @Override
         public ModSource.Download fileDownload(Http http, GitHubSource gitHub, String file) throws IOException {
-            int slash = path.lastIndexOf('/');
-            return gitHub.fileDownload(repo, (slash >= 0 ? path.substring(0, slash + 1) : "") + "files/" + file, ref);
+            return gitHub.fileDownload(repo, folder() + "files/" + file, ref);
         }
+
+        @Override
+        public @Nullable Archive archive(GitHubSource gitHub) throws IOException {
+            return new Archive(gitHub.zipball(repo, ref), folder());
+        }
+
+        /** The folder of the list in the repo, with "/" at the end, or "" for the repo's top */
+        private String folder() {
+            int slash = path.lastIndexOf('/');
+            return slash >= 0 ? path.substring(0, slash + 1) : "";
+        }
+    }
+
+    /**
+     * Everything next to the list in one download, a zip with a single folder at the top (as GitHub makes them)
+     *
+     * @param folder where the list is inside that folder, with "/" at the end, or "" for the top
+     */
+    record Archive(ModSource.Download download, String folder) {
+    }
+
+    /** Everything next to the list in one download, if the place of the list has such a thing */
+    default @Nullable Archive archive(GitHubSource gitHub) throws IOException {
+        return null;
     }
 
     /** A list anywhere else on the web */

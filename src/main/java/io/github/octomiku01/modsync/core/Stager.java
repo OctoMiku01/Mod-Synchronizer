@@ -1,13 +1,19 @@
 package io.github.octomiku01.modsync.core;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.IntConsumer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -27,9 +33,17 @@ public final class Stager {
         this.workFolder = workFolder;
     }
 
+    /** From this many files on that lie next to the list, they come in one archive instead of one request each */
+    private static final int ARCHIVE_FROM = 10;
+
     /** Where a file of the list is downloaded from */
     public interface FileResolver {
         ModSource.Download resolve(Manifest.FileEntry file) throws IOException, InterruptedException;
+
+        /** All files next to the list in one download, if their place has such a thing */
+        default @Nullable ListLocation.Archive archive() throws IOException {
+            return null;
+        }
     }
 
     public Path stateFile() {
@@ -82,12 +96,15 @@ public final class Stager {
         for (String path : plan.files().remove()) {
             deletions.add(gameFolder.resolve(path(path)));
         }
+        Set<String> unpacked = unpack(plan.files().install(), staging, files);
         for (Manifest.FileEntry file : plan.files().install()) {
             // Under its own path, so that files of the same name in different folders do not meet
             Path target = staging.resolve("files").resolve(path(file.path()));
             Files.createDirectories(target.getParent());
-            ModSource.Download download = files.resolve(file);
-            http.download(download.uri(), download.headers(), target);
+            if (!unpacked.contains(file.path())) {
+                ModSource.Download download = files.resolve(file);
+                http.download(download.uri(), download.headers(), target);
+            }
             if (!Hashes.match(file.hashes(), Hashes.of(target))) {
                 Files.delete(target);
                 throw new IOException(file.path() + " does not match the hashes in the list: it was changed, or the list is wrong");
@@ -111,6 +128,55 @@ public final class Stager {
         Path stepsFile = workFolder.resolve("pending.txt");
         Files.write(stepsFile, steps, StandardCharsets.UTF_8);
         return stepsFile;
+    }
+
+    /**
+     * With many files next to the list, gets them all in one archive instead of one request each: GitHub allows a
+     * token some thousand requests an hour, and an access code shared by several players would run out of them. Puts
+     * the files it finds where the single downloads would; the caller checks their hashes all the same. Anything that
+     * goes wrong just leaves the files to the single downloads.
+     *
+     * @return the paths of the files it put in place
+     */
+    private Set<String> unpack(List<Manifest.FileEntry> install, Path staging, FileResolver files) throws InterruptedException {
+        List<Manifest.FileEntry> nextToList = install.stream().filter(Manifest.FileEntry::nextToList).toList();
+        Set<String> unpacked = new HashSet<>();
+        if (nextToList.size() < ARCHIVE_FROM) {
+            return unpacked;
+        }
+        Path zip = staging.resolve("list.zip");
+        try {
+            @Nullable ListLocation.Archive archive = files.archive();
+            if (archive == null) {
+                return unpacked;
+            }
+            http.download(archive.download().uri(), archive.download().headers(), zip);
+            try (ZipFile zipFile = new ZipFile(zip.toFile())) {
+                // GitHub puts everything into one folder named after the repo and commit
+                String top = zipFile.stream().findFirst().map(entry -> entry.getName().substring(0, entry.getName().indexOf('/') + 1)).orElse("");
+                for (Manifest.FileEntry file : nextToList) {
+                    @Nullable ZipEntry entry = zipFile.getEntry(top + archive.folder() + "files/" + file.path());
+                    if (entry == null || entry.isDirectory()) {
+                        continue;
+                    }
+                    Path target = staging.resolve("files").resolve(path(file.path()));
+                    Files.createDirectories(target.getParent());
+                    try (InputStream in = zipFile.getInputStream(entry)) {
+                        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                    unpacked.add(file.path());
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            // The single downloads take over for whatever is not unpacked
+        } finally {
+            try {
+                Files.deleteIfExists(zip);
+            } catch (IOException e) {
+                // Cleaned up at the next start
+            }
+        }
+        return unpacked;
     }
 
     /** A path of the list ("/" between folders, checked when the list was read) as a relative path on this system */

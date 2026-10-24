@@ -69,6 +69,14 @@ public final class GitHubSource implements ModSource {
         return new Download(URI.create(API + contents(repo, path, ref)), headers);
     }
 
+    /** The whole repo as a zip, in one request instead of one per file; {@code ref} as for {@link #file} */
+    public Download zipball(String repo, @Nullable String ref) throws IOException {
+        Map<String, String> headers = new HashMap<>(auth.headers());
+        headers.put("Accept", "application/vnd.github+json");
+        headers.put("X-GitHub-Api-Version", "2022-11-28");
+        return new Download(URI.create(API + "/repos/" + repo(repo) + "/zipball" + (ref != null ? "/" + encode(ref) : "")), headers);
+    }
+
     private static String contents(String repo, String path, @Nullable String ref) throws IOException {
         StringBuilder url = new StringBuilder("/repos/").append(repo(repo)).append("/contents");
         for (String part : path.split("/")) {
