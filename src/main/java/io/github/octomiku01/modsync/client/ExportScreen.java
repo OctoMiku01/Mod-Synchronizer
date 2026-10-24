@@ -52,6 +52,13 @@ final class ExportScreen extends Screen {
         box.setValue(String.join(", ", sync.config().exportPaths));
         box.setHint(Component.translatable("modsync.export.paths.hint").withStyle(ChatFormatting.DARK_GRAY));
         paths = box;
+        contents.addChild(Button.builder(Component.translatable("modsync.export.browse"), button -> {
+            remember();
+            minecraft.gui.setScreen(new FileBrowserScreen(this, sync.gameFolder(), Set.copyOf(sync.config().exportPaths), chosen -> {
+                sync.config().exportPaths = new ArrayList<>(chosen);
+                sync.config().save();
+            }));
+        }).width(WIDTH).build());
 
         LinearLayout footer = layout.addToFooter(LinearLayout.horizontal().spacing(10));
         footer.addChild(Button.builder(Component.translatable("modsync.export.run"), button -> export()).width(HALF).build());

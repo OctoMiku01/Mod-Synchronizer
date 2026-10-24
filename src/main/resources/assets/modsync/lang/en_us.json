@@ -58,5 +58,9 @@
 	"modsync.export.paths.hint": "e.g. config, resourcepacks, shaderpacks",
 	"modsync.export.run": "Export",
 	"modsync.export.skipped": "Left out: %s",
-	"modsync.plan.applyReplacing": "Download and replace %s of your own"
+	"modsync.plan.applyReplacing": "Download and replace %s of your own",
+	"modsync.export.browse": "Choose files and folders…",
+	"modsync.browse.title": "Choose files and folders",
+	"modsync.browse.gameFolder": "Game folder",
+	"modsync.browse.up": "Up"
 }

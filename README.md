@@ -37,7 +37,8 @@ contact links rightly point to the original can name its own repo in its `fabric
 ## Other files
 
 Besides the mods, a list can bring other files of the game folder, like configs, resource packs or shader packs. The
-export screen takes the files and folders that go with the list (like `config, resourcepacks, shaderpacks`); packs
+export screen takes the files and folders that go with the list, typed in (like `config, resourcepacks, shaderpacks`)
+or picked in a file browser that also reaches into subfolders; packs
 Modrinth hosts get their Modrinth entry, everything else is copied into `modsync-export/files` under its path. Put
 the whole `modsync-export` folder into the list's repo: the files are read from the `files` folder next to
 `modpack.json`. This mod's own config never goes with the list. Check configs for passwords or tokens before sharing

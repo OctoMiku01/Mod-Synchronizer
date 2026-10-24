@@ -70,6 +70,10 @@ public final class ModSync {
         ApplyHelper.cleanUp(workFolder);
     }
 
+    public Path gameFolder() {
+        return gameFolder;
+    }
+
     public ModSyncConfig config() {
         return config;
     }
