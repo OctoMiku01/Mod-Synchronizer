@@ -40,6 +40,10 @@ public record Manifest(String minecraft, String loader, List<Entry> mods, @Nulla
             return new Entry(source, project, version, file, hashes, side, id);
         }
 
+        public Entry withSide(@Nullable Side newSide) {
+            return new Entry(source, project, version, file, hashes, newSide, modId);
+        }
+
         /** Stays the same across versions of the mod: an entry with the same key replaces the older file */
         public String key() {
             return source + ":" + project;
@@ -60,9 +64,14 @@ public record Manifest(String minecraft, String loader, List<Entry> mods, @Nulla
      * @param project for Modrinth: the project id
      * @param version for Modrinth: the version id
      * @param file    for Modrinth: the file name of the version
+     * @param side    where the file is needed, both when left out; resource and shader packs only on clients, say
      */
     public record FileEntry(String path, Map<String, String> hashes, @Nullable String source, @Nullable String project,
-                            @Nullable String version, @Nullable String file) {
+                            @Nullable String version, @Nullable String file, @Nullable Side side) {
+        public boolean neededOn(Side here) {
+            return side == null || side == Side.BOTH || side == here;
+        }
+
         /** Folders a list may never write into: the mods (they have their own entries), this mod's own, and the player's own data */
         private static final Set<String> FORBIDDEN = Set.of("mods", ".modsync", "saves", "logs", "crash-reports", "screenshots",
                 "versions", "libraries", "assets", ".fabric");

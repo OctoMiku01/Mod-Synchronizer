@@ -24,12 +24,14 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -84,13 +86,27 @@ public final class ModSync {
     /** Tries the steps left from the last exit again at this one */
     public void retryApply() throws IOException {
         Files.deleteIfExists(workFolder.resolve(ApplyHelper.FAILED));
-        ApplyHelper.launch(workFolder.resolve("pending.txt"), classPath());
+        scheduleApply(workFolder.resolve("pending.txt"));
     }
 
     /** Gives up on the steps left from the last exit: the next comparison with the list brings what is still missing */
     public void discardApply() throws IOException {
         Files.deleteIfExists(workFolder.resolve(ApplyHelper.FAILED));
         Files.deleteIfExists(workFolder.resolve("pending.txt"));
+    }
+
+    /**
+     * Puts the staged files in place once the game is gone: by the helper process, which waits for this one to exit,
+     * or on a server that does not run on Windows as it shuts down, since a server in a container takes all its
+     * processes with it when it stops, and Linux replaces files that are in use
+     */
+    private static void scheduleApply(Path steps) throws IOException {
+        boolean windows = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
+        if (FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER && !windows) {
+            ApplyHelper.applyAtShutdown(steps);
+        } else {
+            ApplyHelper.launch(steps, classPath());
+        }
     }
 
     private static List<Path> classPath() {
@@ -125,7 +141,7 @@ public final class ModSync {
         Set<String> ignored = Set.copyOf(config.ignoredMods);
         return SyncPlan.compute(manifest, LocalMods.scan(modsFolder), SyncState.load(stager.stateFile()), config.side,
                         sources.keySet(), ignored, modsFolder)
-                .withFiles(FilePlan.compute(manifest.files(), gameFolder, SyncState.load(stager.filesStateFile()), ignored));
+                .withFiles(FilePlan.compute(manifest.files(), gameFolder, SyncState.load(stager.filesStateFile()), config.side, ignored));
     }
 
     /**
@@ -183,7 +199,7 @@ public final class ModSync {
         }, progress);
         // A new attempt: what the last one could not do is part of this plan, if it is still needed
         Files.deleteIfExists(workFolder.resolve(ApplyHelper.FAILED));
-        ApplyHelper.launch(steps, classPath());
+        scheduleApply(steps);
     }
 
     /**
@@ -223,7 +239,8 @@ public final class ModSync {
             if (entry == null) {
                 entry = new Manifest.Entry("file", mod.name(), "", mod.name(), new LinkedHashMap<>(mod.hashes()), null, null);
             }
-            entries.add(entry.withModId(mod.modId()));
+            // Where it runs as the mod itself says: a server then leaves out the client mods, and the other way round
+            entries.add(entry.withModId(mod.modId()).withSide(mod.side()));
         }
 
         Path out = exportFolder();
@@ -279,7 +296,8 @@ public final class ModSync {
         for (Map.Entry<String, Map<String, String>> file : hashes.entrySet()) {
             Manifest.Entry pack = knownPacks.get(file.getValue().get("sha512"));
             if (pack != null) {
-                files.add(new Manifest.FileEntry(file.getKey(), pack.hashes(), ModrinthSource.ID, pack.project(), pack.version(), pack.file()));
+                files.add(new Manifest.FileEntry(file.getKey(), pack.hashes(), ModrinthSource.ID, pack.project(), pack.version(), pack.file(),
+                        fileSide(file.getKey())));
             } else {
                 Path copy = out.resolve("files").resolve(file.getKey());
                 Files.createDirectories(copy.getParent());
@@ -289,7 +307,7 @@ public final class ModSync {
                     skipped.add(file.getKey() + " (in use, could not be read)");
                     continue;
                 }
-                files.add(new Manifest.FileEntry(file.getKey(), file.getValue(), null, null, null, null));
+                files.add(new Manifest.FileEntry(file.getKey(), file.getValue(), null, null, null, null, fileSide(file.getKey())));
             }
         }
         Files.writeString(out.resolve("modpack.json"),
@@ -313,6 +331,16 @@ public final class ModSync {
             LOGGER.warn("Could not read the shared list, the exceptions go into the export as they are here: {}", e.toString());
         }
         return entries;
+    }
+
+    /** Files only a client has use for: packs, the game's own options and the server list; everything else on both */
+    private static Manifest.@Nullable Side fileSide(String path) {
+        String top = path.contains("/") ? path.substring(0, path.indexOf('/')) : "";
+        if (top.equals("resourcepacks") || top.equals("shaderpacks") || top.equals("screenshots")
+                || top.isEmpty() && (path.startsWith("options") && path.endsWith(".txt") || path.startsWith("servers") && path.endsWith(".dat"))) {
+            return Manifest.Side.CLIENT;
+        }
+        return null;
     }
 
     /**

@@ -52,6 +52,21 @@ changed, or had before (often a config a mod made itself at its first start), st
 "Download and replace your own" takes the list's version anyway. Files the list drops are removed if unchanged.
 Lists may only write into the game folder, never into `mods`, `saves`, `logs` or this mod's own `.modsync`.
 
+## Dedicated servers
+
+On a dedicated server the mod has no screens: at start it compares with the list in the background, downloads what
+differs and writes to the log what changes, which then takes a restart. It installs only what the list marks for the
+server or for both sides, so client mods like shaders or minimaps stay off it. Set `manifestUrl` in
+`config/modsync.json`; on a server `side` starts out as `server`. When the list needs GitHub access, the log shows a
+code to enter on github.com/login/device, or an access code can be written into `~/.modsync/github-token` of the
+user the server runs as. Files the server has its own version of stay, unless `replaceChangedFiles` is `true`.
+
+On Windows the helper process puts the downloads in place after the server has stopped. Elsewhere they are put in
+place as the server shuts down, since a server in a container takes all its processes with it when it stops.
+
+The export marks each mod with the side its own `fabric.mod.json` gives (`environment`), and resource packs, shader
+packs, `options*.txt` and `servers*.dat` as client only. A list exported before that has no sides: export it again.
+
 ## GitHub
 
 The shared list can be in a repo, private ones too: `github:owner/repo/path/to/modpack.json`, optionally with

@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
@@ -29,6 +30,11 @@ public final class ModSyncConfig {
     public List<String> ignoredMods = new ArrayList<>();
     /** The files and folders of the game folder that an export puts into the list besides the mods, like "config" */
     public List<String> exportPaths = new ArrayList<>();
+    /**
+     * On a dedicated server, which cannot ask: whether the list's version replaces files the server has its own
+     * version of, like configs changed there
+     */
+    public boolean replaceChangedFiles = false;
     /** Where an export goes, like a local clone of the list's repo; empty: modsync-export in the game folder */
     public String exportFolder = "";
     /** The client ID of a GitHub App or OAuth app to log in through instead of the built-in one, with device flow on */
@@ -46,6 +52,10 @@ public final class ModSyncConfig {
         }
         if (config == null) {
             config = new ModSyncConfig();
+            // A dedicated server needs the server mods of the list, not the client ones
+            if (FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER) {
+                config.side = Manifest.Side.SERVER;
+            }
         }
         config.save();
         return config;

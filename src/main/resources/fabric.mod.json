@@ -14,10 +14,13 @@
 	},
 	"license": "MIT",
 	"icon": "assets/modsync/icon.png",
-	"environment": "client",
+	"environment": "*",
 	"entrypoints": {
 		"client": [
 			"io.github.octomiku01.modsync.client.ModSyncClient"
+		],
+		"server": [
+			"io.github.octomiku01.modsync.server.ModSyncServer"
 		],
 		"modmenu": [
 			"io.github.octomiku01.modsync.client.ModSyncModMenu"

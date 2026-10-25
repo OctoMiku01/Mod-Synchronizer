@@ -20,8 +20,11 @@ import org.jetbrains.annotations.Nullable;
 
 /** The jars in the mods folder with their hashes and Fabric mod IDs */
 public final class LocalMods {
-    /** @param modId the ID in the jar's fabric.mod.json, null for a jar without one */
-    public record LocalMod(Path file, Map<String, String> hashes, @Nullable String modId) {
+    /**
+     * @param modId the ID in the jar's fabric.mod.json, null for a jar without one
+     * @param side  where the mod runs by its fabric.mod.json ("environment"), null for both or when it does not say
+     */
+    public record LocalMod(Path file, Map<String, String> hashes, @Nullable String modId, @Nullable Manifest.Side side) {
         public String name() {
             return file.getFileName().toString();
         }
@@ -33,7 +36,8 @@ public final class LocalMods {
     public static List<LocalMod> scan(Path modsFolder) throws IOException {
         List<LocalMod> mods = new ArrayList<>();
         for (Path file : jars(modsFolder)) {
-            mods.add(new LocalMod(file, Hashes.of(file), modId(file)));
+            @Nullable JsonObject metadata = fabricModJson(file);
+            mods.add(new LocalMod(file, Hashes.of(file), string(metadata, "id"), side(string(metadata, "environment"))));
         }
         return mods;
     }
@@ -50,9 +54,20 @@ public final class LocalMods {
     }
 
     public static @Nullable String modId(Path jar) {
-        @Nullable JsonObject metadata = fabricModJson(jar);
-        JsonElement id = metadata == null ? null : metadata.get("id");
-        return id != null && id.isJsonPrimitive() ? id.getAsString() : null;
+        return string(fabricModJson(jar), "id");
+    }
+
+    private static @Nullable String string(@Nullable JsonObject metadata, String key) {
+        JsonElement value = metadata == null ? null : metadata.get(key);
+        return value != null && value.isJsonPrimitive() ? value.getAsString() : null;
+    }
+
+    private static Manifest.@Nullable Side side(@Nullable String environment) {
+        return switch (environment == null ? "*" : environment) {
+            case "client" -> Manifest.Side.CLIENT;
+            case "server" -> Manifest.Side.SERVER;
+            default -> null;
+        };
     }
 
     /** The jar's fabric.mod.json, null if it has none or it cannot be read */

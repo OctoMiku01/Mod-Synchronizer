@@ -89,40 +89,62 @@ public final class ApplyHelper {
     public static void main(String[] args) throws Exception {
         long gamePid = Long.parseLong(args[0]);
         Path stepsFile = Path.of(args[1]);
-        Path log = stepsFile.resolveSibling("apply.log");
-        try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(log, StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND))) {
+        try (PrintWriter out = log(stepsFile)) {
             out.println(LocalDateTime.now() + " waiting for the game (pid " + gamePid + ") to exit");
             out.flush();
             Optional<ProcessHandle> game = ProcessHandle.of(gamePid);
             if (game.isPresent()) {
                 game.get().onExit().join();
             }
-            List<String> steps;
-            try (Stream<String> lines = Files.lines(stepsFile, StandardCharsets.UTF_8)) {
-                steps = lines.filter(line -> !line.isBlank()).toList();
-            }
-            List<String> failed = new ArrayList<>();
-            for (String step : steps) {
-                try {
-                    run(step);
-                    out.println("done: " + step);
-                } catch (IOException e) {
-                    String[] parts = step.split("\t");
-                    failed.add(Path.of(parts[parts.length - 1]).getFileName().toString());
-                    out.println("FAILED: " + step + " (" + e + ")");
-                }
-            }
-            // The game reads this at its next start, to tell the player and offer to try again
-            Path failedFile = stepsFile.resolveSibling(FAILED);
-            if (failed.isEmpty()) {
-                Files.deleteIfExists(stepsFile);
-                Files.deleteIfExists(failedFile);
-            } else {
-                Files.write(failedFile, failed, StandardCharsets.UTF_8);
-            }
-            out.println(LocalDateTime.now() + (failed.isEmpty() ? " finished" : " finished with errors"));
+            apply(stepsFile, out);
         }
+    }
+
+    /**
+     * Carries out the steps inside the running process, as it shuts down. Only where files in use can be replaced, as
+     * on Linux, and for servers in a container, which stops with the server and would take the helper process with it.
+     */
+    public static void applyAtShutdown(Path stepsFile) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try (PrintWriter out = log(stepsFile)) {
+                out.println(LocalDateTime.now() + " putting the files in place as the server shuts down");
+                apply(stepsFile, out);
+            } catch (IOException | InterruptedException e) {
+                // Nothing to tell anyone at this point: the steps stay for the next start
+            }
+        }, "Mod Synchronizer apply"));
+    }
+
+    private static PrintWriter log(Path stepsFile) throws IOException {
+        return new PrintWriter(Files.newBufferedWriter(stepsFile.resolveSibling("apply.log"), StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND));
+    }
+
+    private static void apply(Path stepsFile, PrintWriter out) throws IOException, InterruptedException {
+        List<String> steps;
+        try (Stream<String> lines = Files.lines(stepsFile, StandardCharsets.UTF_8)) {
+            steps = lines.filter(line -> !line.isBlank()).toList();
+        }
+        List<String> failed = new ArrayList<>();
+        for (String step : steps) {
+            try {
+                run(step);
+                out.println("done: " + step);
+            } catch (IOException e) {
+                String[] parts = step.split("\t");
+                failed.add(Path.of(parts[parts.length - 1]).getFileName().toString());
+                out.println("FAILED: " + step + " (" + e + ")");
+            }
+        }
+        // The game reads this at its next start, to tell the player and offer to try again
+        Path failedFile = stepsFile.resolveSibling(FAILED);
+        if (failed.isEmpty()) {
+            Files.deleteIfExists(stepsFile);
+            Files.deleteIfExists(failedFile);
+        } else {
+            Files.write(failedFile, failed, StandardCharsets.UTF_8);
+        }
+        out.println(LocalDateTime.now() + (failed.isEmpty() ? " finished" : " finished with errors"));
     }
 
     private static void run(String step) throws IOException, InterruptedException {

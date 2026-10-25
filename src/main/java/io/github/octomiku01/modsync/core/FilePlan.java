@@ -41,9 +41,12 @@ public record FilePlan(List<Manifest.FileEntry> install, List<String> remove, Li
         return new FilePlan(all, remove, List.of(), newState);
     }
 
-    /** @param ignored paths (or folders, which take in everything in them) this installation keeps out of the sync */
+    /**
+     * @param here    which side this installation is: files for the other side are left alone, like packs on a server
+     * @param ignored paths (or folders, which take in everything in them) this installation keeps out of the sync
+     */
     public static FilePlan compute(@Nullable List<Manifest.FileEntry> files, Path gameFolder, Map<String, String> oldState,
-                                   Set<String> ignored) throws IOException {
+                                   Manifest.Side here, Set<String> ignored) throws IOException {
         List<Manifest.FileEntry> install = new ArrayList<>();
         List<String> remove = new ArrayList<>();
         List<Manifest.FileEntry> kept = new ArrayList<>();
@@ -53,7 +56,7 @@ public record FilePlan(List<Manifest.FileEntry> install, List<String> remove, Li
         for (Manifest.FileEntry entry : files == null ? List.<Manifest.FileEntry>of() : files) {
             listed.add(entry.path());
             @Nullable String installed = oldState.get(entry.path());
-            if (isIgnored(entry.path(), ignored)) {
+            if (!entry.neededOn(here) || isIgnored(entry.path(), ignored)) {
                 if (installed != null) {
                     state.put(entry.path(), installed);
                 }

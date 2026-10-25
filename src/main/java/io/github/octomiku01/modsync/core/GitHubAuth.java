@@ -49,6 +49,11 @@ public final class GitHubAuth {
         }
     }
 
+    /** Where the token is kept; an access code written there by hand works as well */
+    public Path tokenFile() {
+        return tokenFile;
+    }
+
     public boolean loggedIn() {
         return token != null;
     }
