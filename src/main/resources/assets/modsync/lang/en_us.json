@@ -70,5 +70,7 @@
 	"modsync.export.folder": "Export to",
 	"modsync.export.folder.hint": "Empty: modsync-export in the game folder",
 	"modsync.export.folder.pick": "Choose…",
-	"modsync.export.gitHint": "It is a Git repo: commit and push the changes to share them."
+	"modsync.export.gitHint": "It is a Git repo: commit and push the changes to share them.",
+	"modsync.error.noAccess": "No access to %s on GitHub. List owner: install the GitHub App \"Mod Synchronizer\" in this repo and add it to the access code. Players: ask for read access to the repo.",
+	"modsync.error.missing": "%s is not in %s on GitHub: it was deleted, or the list is wrong. Ask the list owner to export the list again."
 }

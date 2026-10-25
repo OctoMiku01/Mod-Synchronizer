@@ -2,6 +2,7 @@ package io.github.octomiku01.modsync.client;
 
 import io.github.octomiku01.modsync.ModSync;
 import io.github.octomiku01.modsync.core.GitHubAuth;
+import io.github.octomiku01.modsync.core.GitHubSource;
 import io.github.octomiku01.modsync.core.Manifest;
 import io.github.octomiku01.modsync.core.SyncPlan;
 import java.io.IOException;
@@ -159,13 +160,24 @@ final class SyncScreens {
             } catch (IOException | RuntimeException e) {
                 ModSync.LOGGER.error("{} failed", name, e);
                 client.execute(() -> client.gui.setScreen(new AlertScreen(() -> client.gui.setScreen(back),
-                        Component.translatable(failedKey), Component.literal(String.valueOf(e.getMessage())))));
+                        Component.translatable(failedKey), describe(e))));
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }, name);
         thread.setDaemon(true);
         thread.start();
+    }
+
+    /** What went wrong, in words a player can act on where it is known what to do about it */
+    private static Component describe(Exception e) {
+        if (e instanceof GitHubSource.NoAccess noAccess) {
+            return Component.translatable("modsync.error.noAccess", noAccess.repo());
+        }
+        if (e instanceof GitHubSource.Missing missing) {
+            return Component.translatable("modsync.error.missing", missing.what(), missing.repo());
+        }
+        return Component.literal(String.valueOf(e.getMessage()));
     }
 
     private static Component describe(SyncPlan plan) {

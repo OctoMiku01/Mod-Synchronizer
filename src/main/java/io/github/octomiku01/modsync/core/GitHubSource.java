@@ -41,9 +41,53 @@ public final class GitHubSource implements ModSource {
         return ID;
     }
 
+    /**
+     * The repo cannot be read with this login: it is private, and the GitHub App is not installed in it, the access
+     * code does not take it in, or the player has no access of their own. GitHub says "404" for it, as if it were not there.
+     */
+    public static final class NoAccess extends IOException {
+        private final String repo;
+
+        NoAccess(String repo) {
+            super("No access to " + repo + " on GitHub: install the GitHub App \"Mod Synchronizer\" in it and add it to the access code, "
+                    + "or the player needs read access to it");
+            this.repo = repo;
+        }
+
+        public String repo() {
+            return repo;
+        }
+    }
+
+    /** The repo can be read, but what the list names is not in it: deleted, or the list is wrong */
+    public static final class Missing extends IOException {
+        private final String what;
+        private final String repo;
+
+        Missing(String what, String repo) {
+            super(what + " is not in " + repo + " on GitHub: deleted, or the list is wrong");
+            this.what = what;
+            this.repo = repo;
+        }
+
+        public String what() {
+            return what;
+        }
+
+        public String repo() {
+            return repo;
+        }
+    }
+
     @Override
     public Download resolve(Manifest.Entry entry) throws IOException, InterruptedException {
-        JsonObject release = getJson("/repos/" + repo(entry.project()) + "/releases/tags/" + encode(entry.version())).getAsJsonObject();
+        String repo = repo(entry.project());
+        JsonObject release;
+        try {
+            release = getJson("/repos/" + repo + "/releases/tags/" + encode(entry.version())).getAsJsonObject();
+        } catch (Http.StatusException e) {
+            throw e.status() == 404 ? notFound(repo, "Release " + entry.version()) : e;
+        }
         for (JsonElement element : release.getAsJsonArray("assets")) {
             JsonObject asset = element.getAsJsonObject();
             if (asset.get("name").getAsString().equals(entry.file())) {
@@ -58,7 +102,21 @@ public final class GitHubSource implements ModSource {
 
     /** A file from a repo, like the shared list itself; {@code ref} is a branch, tag or commit, the default branch when null */
     public String file(String repo, String path, @Nullable String ref) throws IOException, InterruptedException {
-        return get(contents(repo, path, ref), "application/vnd.github.raw+json");
+        try {
+            return get(contents(repo, path, ref), "application/vnd.github.raw+json");
+        } catch (Http.StatusException e) {
+            throw e.status() == 404 ? notFound(repo(repo), path) : e;
+        }
+    }
+
+    /** What a 404 means: GitHub answers it for what is not there and for private repos it does not let this login see */
+    private IOException notFound(String repo, String what) throws InterruptedException {
+        try {
+            get("/repos/" + repo, "application/vnd.github+json");
+            return new Missing(what, repo);
+        } catch (IOException e) {
+            return new NoAccess(repo);
+        }
     }
 
     /** Where a file from a repo is downloaded from, like a config that goes with the list; up to 100 MB */
@@ -104,7 +162,7 @@ public final class GitHubSource implements ModSource {
         if (all == null) {
             try {
                 all = getJson("/repos/" + repo + "/releases?per_page=100").getAsJsonArray();
-            } catch (Http.StatusException | GitHubAuth.LoginRequired e) {
+            } catch (Http.StatusException | GitHubAuth.LoginRequired | NoAccess e) {
                 // A link to a repo that is gone, or that this login cannot see
                 all = new JsonArray();
             }
