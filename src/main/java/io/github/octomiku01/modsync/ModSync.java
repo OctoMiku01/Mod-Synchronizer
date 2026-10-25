@@ -52,7 +52,7 @@ public final class ModSync {
     private final Http http = new Http(FabricLoader.getInstance().getModContainer(MOD_ID)
             .map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown"));
     /** Kept per user, outside the game folder: it is the same login for every instance */
-    private final GitHubAuth gitHubAuth = new GitHubAuth(http, Path.of(System.getProperty("user.home"), "." + MOD_ID, "github-token"));
+    private final GitHubAuth gitHubAuth = new GitHubAuth(http, Path.of(System.getProperty("user.home"), "." + MOD_ID, "github-token"), this::gitHubClientId);
     private final ModrinthSource modrinth = new ModrinthSource(http);
     private final GitHubSource gitHub = new GitHubSource(http, gitHubAuth);
     private final Map<String, ModSource> sources = Map.of(modrinth.id(), modrinth, gitHub.id(), gitHub);

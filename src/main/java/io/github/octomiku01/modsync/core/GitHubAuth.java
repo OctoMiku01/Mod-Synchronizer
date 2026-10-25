@@ -5,16 +5,19 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * The player's GitHub login, through GitHub's device flow: the player enters a short code on github.com, and no
  * password or secret ever passes through the game. The token is kept per user, not per game folder, so it does not
- * end up in exported instances; a personal access token written into the same file by hand works as well.
+ * end up in exported instances, and on Windows encrypted (see {@link TokenStore}); a personal access token written
+ * into the same file by hand works as well. A GitHub App with expiring tokens hands out ones that last 8 hours, with a
+ * refresh token that lasts 6 months: they are renewed shortly before they run out, without a client secret, which
+ * GitHub does not ask for with tokens from the device flow.
  */
 public final class GitHubAuth {
     /**
@@ -34,19 +37,20 @@ public final class GitHubAuth {
         }
     }
 
+    /** Renewed this long before it runs out, so that no request goes out with a token about to expire */
+    private static final long RENEW_BEFORE_SECONDS = 300;
+
     private final Http http;
     private final Path tokenFile;
-    private volatile @Nullable String token;
+    private final Supplier<String> clientId;
+    private volatile TokenStore.@Nullable Credential credential;
 
-    public GitHubAuth(Http http, Path tokenFile) {
+    /** @param clientId the app the login goes through, also for renewing it */
+    public GitHubAuth(Http http, Path tokenFile, Supplier<String> clientId) {
         this.http = http;
         this.tokenFile = tokenFile;
-        try {
-            String stored = Files.exists(tokenFile) ? Files.readString(tokenFile, StandardCharsets.UTF_8).strip() : "";
-            token = stored.isEmpty() ? null : stored;
-        } catch (IOException e) {
-            token = null;
-        }
+        this.clientId = clientId;
+        this.credential = TokenStore.read(tokenFile);
     }
 
     /** Where the token is kept; an access code written there by hand works as well */
@@ -55,13 +59,60 @@ public final class GitHubAuth {
     }
 
     public boolean loggedIn() {
-        return token != null;
+        return credential != null;
     }
 
-    /** The headers that authorize a request to the GitHub API, none while logged out */
-    public Map<String, String> headers() {
-        String current = token;
-        return current == null ? Map.of() : Map.of("Authorization", "Bearer " + current);
+    /** The headers that authorize a request to the GitHub API, none while logged out; renews the token first if due */
+    public synchronized Map<String, String> headers() {
+        renewIfDue();
+        TokenStore.@Nullable Credential current = credential;
+        return current == null ? Map.of() : Map.of("Authorization", "Bearer " + current.token());
+    }
+
+    private void renewIfDue() {
+        TokenStore.@Nullable Credential current = credential;
+        long now = System.currentTimeMillis() / 1000;
+        if (current == null || current.refreshToken() == null || current.expiresAt() == 0 || now < current.expiresAt() - RENEW_BEFORE_SECONDS) {
+            return;
+        }
+        if (current.refreshExpiresAt() != 0 && now >= current.refreshExpiresAt()) {
+            // Not used for half a year: a new login it is
+            forget();
+            return;
+        }
+        try {
+            JsonObject answer = JsonParser.parseString(http.postForm(URI.create("https://github.com/login/oauth/access_token"),
+                    Map.of("client_id", clientId.get(), "grant_type", "refresh_token", "refresh_token", current.refreshToken()))).getAsJsonObject();
+            if (answer.has("access_token")) {
+                save(credential(answer));
+            } else if (answer.has("error")) {
+                // Withdrawn on github.com, or used up: a new login it is
+                forget();
+            }
+        } catch (IOException | RuntimeException e) {
+            // GitHub not reachable right now: the token may still last a little, else the request says so
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void forget() {
+        credential = null;
+        try {
+            Files.deleteIfExists(tokenFile);
+        } catch (IOException e) {
+            // Read again, and found expired again, at the next start
+        }
+    }
+
+    /** A token, and if it expires its refresh token and when both run out, from GitHub's answer */
+    private static TokenStore.Credential credential(JsonObject answer) {
+        long now = System.currentTimeMillis() / 1000;
+        JsonElement refresh = answer.get("refresh_token");
+        JsonElement expiresIn = answer.get("expires_in");
+        JsonElement refreshExpiresIn = answer.get("refresh_token_expires_in");
+        return new TokenStore.Credential(answer.get("access_token").getAsString(), refresh == null ? null : refresh.getAsString(),
+                expiresIn == null ? 0 : now + expiresIn.getAsLong(), refreshExpiresIn == null ? 0 : now + refreshExpiresIn.getAsLong());
     }
 
     public DeviceCode start(String clientId) throws IOException, InterruptedException {
@@ -88,9 +139,8 @@ public final class GitHubAuth {
             JsonObject answer = JsonParser.parseString(http.postForm(URI.create("https://github.com/login/oauth/access_token"),
                     Map.of("client_id", clientId, "device_code", code.deviceCode(), "grant_type", "urn:ietf:params:oauth:grant-type:device_code")))
                     .getAsJsonObject();
-            JsonElement accessToken = answer.get("access_token");
-            if (accessToken != null) {
-                save(accessToken.getAsString());
+            if (answer.has("access_token")) {
+                save(credential(answer));
                 return;
             }
             switch (answer.has("error") ? answer.get("error").getAsString() : "") {
@@ -114,18 +164,17 @@ public final class GitHubAuth {
         } catch (Http.StatusException e) {
             throw new IOException("GitHub does not accept the access code (" + e.status() + ")", e);
         }
-        save(newToken);
+        save(TokenStore.Credential.lasting(newToken));
     }
 
     public void logout() throws IOException {
-        token = null;
+        credential = null;
         Files.deleteIfExists(tokenFile);
     }
 
-    private void save(String newToken) throws IOException {
-        Files.createDirectories(tokenFile.getParent());
-        Files.writeString(tokenFile, newToken, StandardCharsets.UTF_8);
-        token = newToken;
+    private void save(TokenStore.Credential newCredential) throws IOException {
+        TokenStore.write(tokenFile, newCredential);
+        credential = newCredential;
     }
 
     private static String describe(JsonObject answer) {
