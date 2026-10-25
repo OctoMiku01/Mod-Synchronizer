@@ -173,6 +173,12 @@ public final class GitHubSource implements ModSource {
             if (!auth.loggedIn() && (e.status() == 401 || e.status() == 403 || e.status() == 404)) {
                 throw new GitHubAuth.LoginRequired("GitHub needs a login for " + path);
             }
+            if (e.status() == 401) {
+                // A login GitHub no longer takes: withdrawn on github.com, an access code run out, or one of an app that
+                // is gone. A new one it is.
+                auth.logout();
+                throw new GitHubAuth.LoginRequired("GitHub no longer takes the login, a new one is needed for " + path);
+            }
             throw e;
         }
     }

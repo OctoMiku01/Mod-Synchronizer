@@ -77,7 +77,9 @@ github.com/login/device; the settings log in and out by hand. The token is kept 
 `~/.modsync/github-token`, shared by all instances: on Windows encrypted with DPAPI (the protection the Windows
 credential manager uses), so only the same Windows account can read it, elsewhere readable by its owner only. With
 "Expire user authorization tokens" on in the GitHub App, a token lasts 8 hours and is renewed shortly before it runs
-out (tokens from the device flow need no client secret for that); after six months without use a new login is due.
+out (tokens from the device flow need no client secret for that); after six months without use a new login is due. A
+login GitHub no longer takes (withdrawn, an access code run out, or one of an app that is gone) is dropped, and the
+next sync asks for a new one.
 
 Players without a GitHub account enter an access code in the settings instead: a fine-grained personal access token
 of the list's owner with only "Contents: Read-only" on the repos the list needs. The settings check it with GitHub

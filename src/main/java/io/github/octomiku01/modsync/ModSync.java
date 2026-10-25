@@ -45,7 +45,7 @@ public final class ModSync {
      * The GitHub App players log in through, with device flow on and only read access to repo contents; it reads just
      * the repos it is installed in. A client ID is public, only the (unused) secret and private key are not.
      */
-    private static final String GITHUB_CLIENT_ID = "Iv23liXIgToUgiXmtnxw";
+    private static final String GITHUB_CLIENT_ID = "Iv23liYLk4t5YGqMUlti";
     /** GitHub takes files of up to 100 MB, and warns from 50 MB on */
     private static final long MAX_EXPORT_FILE = 50L * 1024 * 1024;
 
