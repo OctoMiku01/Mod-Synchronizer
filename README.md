@@ -24,9 +24,8 @@ Only jars this mod installed are ever replaced or removed (`.modsync/state.json`
 your own version of: their list entries are neither downloaded nor shown as differing, and their jars are never
 replaced or removed. This is kept in `config/modsync.json` and does not change the shared list.
 
-"Export mod list" in the settings writes the current mods folder as a list to the folder `modsync-export` in the game
-folder, as `modpack.json`: jars Modrinth knows get their
-Modrinth entry, jars whose `fabric.mod.json` links a GitHub repo (`contact.sources`, `homepage` or `issues`) that has
+"Export mod list" in the settings writes the current mods folder as a list, `modpack.json`, to the export folder (see
+"Other files" below): jars Modrinth knows get their Modrinth entry, jars whose `fabric.mod.json` links a GitHub repo (`contact.sources`, `homepage` or `issues`) that has
 them as a release asset get a GitHub entry, the rest an entry with source `file` to fill in by hand. A fork whose
 contact links rightly point to the original can name its own repo in its `fabric.mod.json`:
 
@@ -43,9 +42,10 @@ Modrinth hosts get their Modrinth entry, everything else is copied into `modsync
 the whole `modsync-export` folder into the list's repo: the files are read from the `files` folder next to
 `modpack.json`. Or set "Export to" on the export screen to a local clone of the list's repo: the export then
 replaces only `modpack.json`, `.gitattributes` and `files` there and leaves `.git` and everything else, so it only
-needs a commit and a push. It only exports into an empty folder or one that already holds a `modpack.json`. The export also writes a `.gitattributes` there that keeps Git from changing line endings, as the
-files have to stay byte for byte to match their hashes. This mod's own config never goes with the list. Check configs for passwords or tokens before sharing
-them.
+needs a commit and a push. It only exports into an empty folder or one that already holds a `modpack.json`. The
+export also writes a `.gitattributes` there that keeps Git from changing line endings, as the files have to stay byte
+for byte to match their hashes. This mod's own config never goes with the list. Check configs for passwords or tokens
+before sharing them.
 
 Players get a file when they do not have it, or when the version this mod put there is still unchanged. A file they
 changed, or had before (often a config a mod made itself at its first start), stays: the sync shows it with `!`, and
