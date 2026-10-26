@@ -177,6 +177,11 @@ final class SyncScreens {
         if (e instanceof GitHubSource.Missing missing) {
             return Component.translatable("modsync.error.missing", missing.what(), missing.repo());
         }
+        if (e instanceof Manifest.Invalid invalid) {
+            return invalid.conflict() ? Component.translatable("modsync.error.conflict", invalid.line())
+                    : Component.translatable("modsync.error.invalid", invalid.line() > 0 ? String.valueOf(invalid.line()) : "?",
+                            String.valueOf(invalid.getCause() != null ? invalid.getCause().getMessage() : invalid.getMessage()));
+        }
         return Component.literal(String.valueOf(e.getMessage()));
     }
 

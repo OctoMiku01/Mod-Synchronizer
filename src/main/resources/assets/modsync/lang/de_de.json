@@ -72,5 +72,7 @@
 	"modsync.export.folder.pick": "Wählen…",
 	"modsync.export.gitHint": "Das ist ein Git-Repo: Committe und pushe die Änderungen, um sie zu teilen.",
 	"modsync.error.noAccess": "Kein Zugriff auf %s bei GitHub. Besitzer der Liste: Installiere die GitHub App „Mod Synchronizer“ in diesem Repo und nimm es in den Zugangscode auf. Spieler: Frag nach Lesezugriff auf das Repo.",
-	"modsync.error.missing": "%s gibt es in %s auf GitHub nicht: Es wurde gelöscht, oder die Liste stimmt nicht. Bitte den Besitzer der Liste, sie neu zu exportieren."
+	"modsync.error.missing": "%s gibt es in %s auf GitHub nicht: Es wurde gelöscht, oder die Liste stimmt nicht. Bitte den Besitzer der Liste, sie neu zu exportieren.",
+	"modsync.error.conflict": "Die gemeinsame Liste enthält ab Zeile %s die Markierungen eines Git-Merge-Konflikts (<<<<<<<, =======, >>>>>>>) und kann nicht gelesen werden. Besitzer der Liste: Löse den Konflikt im Repo der Liste (eine Seite behalten), committe und pushe. Ein Pull vor dem Exportieren verhindert das.",
+	"modsync.error.invalid": "Die gemeinsame Liste kann nicht gelesen werden, Zeile %s. Besitzer der Liste: Prüfe modpack.json im Repo der Liste oder exportiere sie neu. (%s)"
 }

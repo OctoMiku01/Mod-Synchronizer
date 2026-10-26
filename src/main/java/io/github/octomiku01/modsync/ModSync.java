@@ -132,7 +132,7 @@ public final class ModSync {
     /** Fetches the list and compares it with the mods folder and the other files that go with it */
     public SyncPlan plan() throws IOException, InterruptedException {
         ListLocation location = ListLocation.parse(config.manifestUrl);
-        Manifest manifest = Manifest.parse(location.read(http, gitHub));
+        Manifest manifest = Manifest.read(location.read(http, gitHub));
         String minecraft = minecraftVersion();
         if (!minecraft.equals(manifest.minecraft()) || !"fabric".equals(manifest.loader())) {
             throw new IOException("The mod list is for " + manifest.loader() + " " + manifest.minecraft() + ", this is fabric " + minecraft);

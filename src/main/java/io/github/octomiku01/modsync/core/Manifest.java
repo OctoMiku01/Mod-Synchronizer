@@ -4,10 +4,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -99,6 +102,50 @@ public record Manifest(String minecraft, String loader, List<Entry> mods, @Nulla
         @SerializedName("client") CLIENT,
         @SerializedName("server") SERVER,
         @SerializedName("both") BOTH
+    }
+
+    /**
+     * The list cannot be read: not JSON, or not a list. Says where, and whether Git left the markers of a merge
+     * conflict in it, which is the usual cause when the list's owner keeps it in a repo.
+     *
+     * @param line     the line it goes wrong in, 0 if not known
+     * @param conflict whether the list holds conflict markers ("<<<<<<<", "=======", ">>>>>>>")
+     */
+    public static final class Invalid extends IOException {
+        private final int line;
+        private final boolean conflict;
+
+        Invalid(String message, int line, boolean conflict, Throwable cause) {
+            super(message, cause);
+            this.line = line;
+            this.conflict = conflict;
+        }
+
+        public int line() {
+            return line;
+        }
+
+        public boolean conflict() {
+            return conflict;
+        }
+    }
+
+    /** Reads the list as it comes from its place, saying where it goes wrong if it cannot be read */
+    public static Manifest read(String json) throws Invalid {
+        try {
+            return parse(json);
+        } catch (JsonParseException e) {
+            String[] lines = json.split("\n", -1);
+            for (int i = 0; i < lines.length; i++) {
+                if (lines[i].startsWith("<<<<<<< ") || lines[i].startsWith(">>>>>>> ")) {
+                    throw new Invalid("The list holds the markers of a Git merge conflict from line " + (i + 1)
+                            + " on: resolve the conflict in the list's repo and push it again", i + 1, true, e);
+                }
+            }
+            Matcher at = Pattern.compile("line (\\d+)").matcher(String.valueOf(e.getMessage()));
+            int line = at.find() ? Integer.parseInt(at.group(1)) : 0;
+            throw new Invalid("The list is not valid" + (line > 0 ? " at line " + line : "") + ": " + e.getMessage(), line, false, e);
+        }
     }
 
     public static Manifest parse(String json) {
