@@ -10,9 +10,11 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.AlertScreen;
@@ -65,6 +67,13 @@ final class ExportScreen extends Screen {
                 sync.config().save();
             }));
         }).width(WIDTH).build());
+
+        contents.addChild(CycleButton.onOffBuilder(sync.config().exportFollowLatest)
+                .withTooltip(value -> Tooltip.create(Component.translatable("modsync.export.followLatest.tooltip")))
+                .create(0, 0, WIDTH, 20, Component.translatable("modsync.export.followLatest"), (button, value) -> {
+                    sync.config().exportFollowLatest = value;
+                    sync.config().save();
+                }));
 
         contents.addChild(new StringWidget(WIDTH, 12, Component.translatable("modsync.export.folder"), font));
         LinearLayout folderRow = contents.addChild(LinearLayout.horizontal().spacing(10));

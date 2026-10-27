@@ -35,6 +35,11 @@ public final class ModSyncConfig {
      * version of, like configs changed there
      */
     public boolean replaceChangedFiles = false;
+    /**
+     * Whether an export lets the mods from GitHub releases follow their repo's newest release: a new release then
+     * reaches every player at their next start, without a new export
+     */
+    public boolean exportFollowLatest = true;
     /** Where an export goes, like a local clone of the list's repo; empty: modsync-export in the game folder */
     public String exportFolder = "";
     /** The client ID of a GitHub App or OAuth app to log in through instead of the built-in one, with device flow on */

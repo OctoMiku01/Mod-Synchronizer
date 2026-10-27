@@ -67,6 +67,8 @@
 	"modsync.applyFailed.message": "When the game last exited, these files could not be put in place, mostly because another program held them open (a virus scanner, or a second Minecraft). Try again when the game exits now, or give up and compare with the list anew?",
 	"modsync.applyFailed.retry": "Try again at exit",
 	"modsync.applyFailed.discard": "Compare anew",
+	"modsync.export.followLatest": "GitHub mods always newest release",
+	"modsync.export.followLatest.tooltip": "On: mods from GitHub releases follow their repo's newest release for this Minecraft version. A new release reaches everyone at their next start, without a new export. Off: the list stays at the release installed now.",
 	"modsync.export.folder": "Export to",
 	"modsync.export.folder.hint": "Empty: modsync-export in the game folder",
 	"modsync.export.folder.pick": "Choose…",

@@ -9,8 +9,11 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -100,6 +103,86 @@ public final class GitHubSource implements ModSource {
         throw new IOException("Release " + entry.version() + " of " + entry.project() + " has no file " + entry.file());
     }
 
+    /**
+     * The entry as the repo's newest release has it, for an entry that follows the newest one; the entry as it is if
+     * the release it names is the newest.
+     * <p>
+     * A repo can have releases for several Minecraft versions: if the release named has the list's Minecraft version
+     * in its tag or file name, only releases that have it too count. The jar is the release asset whose name has the
+     * shape of the one named (the same but for the numbers), else the only jar. Pre-releases count only if the one
+     * named is one. The release must state the jar's SHA-256 checksum, which GitHub does for releases since mid-2025:
+     * that is what the download is checked against.
+     *
+     * @return null if no release fits, then the entry as it is stays
+     */
+    public Manifest.@Nullable Entry newest(Manifest.Entry entry, String minecraft) throws IOException, InterruptedException {
+        String repo = repo(entry.project());
+        JsonArray all;
+        try {
+            all = getJson("/repos/" + repo + "/releases?per_page=30").getAsJsonArray();
+        } catch (Http.StatusException e) {
+            throw e.status() == 404 ? notFound(repo, "The releases") : e;
+        }
+        Pattern version = minecraftVersion(minecraft);
+        boolean forVersion = version.matcher(entry.version()).find() || version.matcher(entry.file()).find();
+        @Nullable Boolean prerelease = null;
+        for (JsonElement element : all) {
+            JsonObject release = element.getAsJsonObject();
+            if (release.get("tag_name").getAsString().equals(entry.version())) {
+                prerelease = release.get("prerelease").getAsBoolean();
+            }
+        }
+        for (JsonElement element : all) {
+            JsonObject release = element.getAsJsonObject();
+            String tag = release.get("tag_name").getAsString();
+            if (tag.equals(entry.version())) {
+                // Newest first: nothing newer fits
+                return entry;
+            }
+            if (release.get("draft").getAsBoolean() || release.get("prerelease").getAsBoolean() && !Boolean.TRUE.equals(prerelease)) {
+                continue;
+            }
+            @Nullable JsonObject asset = jar(release.getAsJsonArray("assets"), entry.file());
+            if (asset == null || forVersion && !version.matcher(tag).find() && !version.matcher(asset.get("name").getAsString()).find()) {
+                continue;
+            }
+            JsonElement digest = asset.get("digest");
+            if (digest == null || digest.isJsonNull() || !digest.getAsString().startsWith("sha256:")) {
+                continue;
+            }
+            Map<String, String> hashes = new HashMap<>();
+            hashes.put("sha256", digest.getAsString().substring("sha256:".length()).toLowerCase(Locale.ROOT));
+            return entry.withRelease(tag, asset.get("name").getAsString(), hashes);
+        }
+        return null;
+    }
+
+    /** "26.2" in "v1.0.0-26.2" or "mod-1.0.0+26.2.jar", but not in "26.2.1" or "126.2" */
+    private static Pattern minecraftVersion(String minecraft) {
+        return Pattern.compile("(?<![0-9.])" + Pattern.quote(minecraft) + "(?![0-9]|\\.[0-9])");
+    }
+
+    /** The asset of a release that is the mod: the jar shaped like the one named, else the only jar besides sources and the like */
+    private static @Nullable JsonObject jar(JsonArray assets, String named) {
+        String shape = shape(named);
+        List<JsonObject> jars = new ArrayList<>();
+        for (JsonElement element : assets) {
+            JsonObject asset = element.getAsJsonObject();
+            String name = asset.get("name").getAsString();
+            if (shape(name).equals(shape)) {
+                return asset;
+            }
+            if (name.endsWith(".jar") && !name.matches(".*-(sources|javadoc|dev|api)\\.jar")) {
+                jars.add(asset);
+            }
+        }
+        return jars.size() == 1 ? jars.getFirst() : null;
+    }
+
+    private static String shape(String name) {
+        return name.replaceAll("[0-9]+", "#");
+    }
+
     /** A file from a repo, like the shared list itself; {@code ref} is a branch, tag or commit, the default branch when null */
     public String file(String repo, String path, @Nullable String ref) throws IOException, InterruptedException {
         try {
@@ -175,7 +258,7 @@ public final class GitHubSource implements ModSource {
                 JsonElement digest = asset.get("digest");
                 if (digest != null && !digest.isJsonNull() && digest.getAsString().equalsIgnoreCase("sha256:" + sha256)) {
                     return new Manifest.Entry(ID, repo, release.get("tag_name").getAsString(), asset.get("name").getAsString(),
-                            new HashMap<>(mod.hashes()), null, mod.modId());
+                            new HashMap<>(mod.hashes()), null, mod.modId(), null);
                 }
             }
         }

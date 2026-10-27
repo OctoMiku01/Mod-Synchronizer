@@ -139,9 +139,38 @@ public final class ModSync {
         }
         listLocation = location;
         Set<String> ignored = Set.copyOf(config.ignoredMods);
+        manifest = withNewestReleases(manifest, ignored);
         return SyncPlan.compute(manifest, LocalMods.scan(modsFolder), SyncState.load(stager.stateFile()), config.side,
                         sources.keySet(), ignored, modsFolder)
                 .withFiles(FilePlan.compute(manifest.files(), gameFolder, SyncState.load(stager.filesStateFile()), config.side, ignored));
+    }
+
+    /**
+     * The list with the entries that follow their repo's newest release set to it. An entry whose releases cannot be
+     * read keeps the release the list names, which then says what is wrong when it is downloaded.
+     */
+    private Manifest withNewestReleases(Manifest manifest, Set<String> ignored) throws InterruptedException {
+        List<Manifest.Entry> entries = new ArrayList<>();
+        for (Manifest.Entry entry : manifest.mods()) {
+            boolean wanted = entry.neededOn(config.side) && !ignored.contains(entry.file()) && (entry.modId() == null || !ignored.contains(entry.modId()));
+            if (entry.followsLatest() && GitHubSource.ID.equals(entry.source()) && wanted) {
+                try {
+                    Manifest.@Nullable Entry newest = gitHub.newest(entry, manifest.minecraft());
+                    if (newest == null) {
+                        LOGGER.warn("No release of {} fits the list, it stays at {}", entry.project(), entry.version());
+                    } else {
+                        if (!newest.version().equals(entry.version())) {
+                            LOGGER.info("{} follows its newest release: {} instead of {}", entry.project(), newest.version(), entry.version());
+                        }
+                        entry = newest;
+                    }
+                } catch (IOException e) {
+                    LOGGER.warn("Could not look up the newest release of {}, it stays at {}: {}", entry.project(), entry.version(), e.toString());
+                }
+            }
+            entries.add(entry);
+        }
+        return new Manifest(manifest.minecraft(), manifest.loader(), entries, manifest.files());
     }
 
     /**
@@ -189,7 +218,7 @@ public final class ModSync {
             public ModSource.Download resolve(Manifest.FileEntry file) throws IOException, InterruptedException {
                 return file.nextToList()
                         ? location.fileDownload(http, gitHub, file.path())
-                        : modrinth.resolve(new Manifest.Entry(ModrinthSource.ID, file.project(), file.version(), file.file(), file.hashes(), null, null));
+                        : modrinth.resolve(new Manifest.Entry(ModrinthSource.ID, file.project(), file.version(), file.file(), file.hashes(), null, null, null));
             }
 
             @Override
@@ -215,7 +244,8 @@ public final class ModSync {
      * Writes the mods folder as a list, together with the given other files and folders of the game folder, to the
      * export folder (see {@link #exportFolder}): {@code modpack.json} and next to it a folder "files" with the
      * files the list brings itself. Jars and packs get their Modrinth entry if Modrinth knows them; jars else their
-     * GitHub entry if their fabric.mod.json links a repo that has them as a release asset, or an entry with source
+     * GitHub entry if their fabric.mod.json links a repo that has them as a release asset (following the repo's newest
+     * release if {@link ModSyncConfig#exportFollowLatest} is on), or an entry with source
      * "file" to fill in by hand. This mod's own config stays out: it holds the player's own settings.
      *
      * @param paths files and folders relative to the game folder, like "config" or "options.txt"
@@ -235,9 +265,12 @@ public final class ModSync {
             entry = known.get(mod.hashes().get("sha512"));
             if (entry == null) {
                 entry = gitHub.identify(mod);
+                if (entry != null) {
+                    entry = entry.withLatest(config.exportFollowLatest);
+                }
             }
             if (entry == null) {
-                entry = new Manifest.Entry("file", mod.name(), "", mod.name(), new LinkedHashMap<>(mod.hashes()), null, null);
+                entry = new Manifest.Entry("file", mod.name(), "", mod.name(), new LinkedHashMap<>(mod.hashes()), null, null, null);
             }
             // Where it runs as the mod itself says: a server then leaves out the client mods, and the other way round
             entries.add(entry.withModId(mod.modId()).withSide(mod.side()));

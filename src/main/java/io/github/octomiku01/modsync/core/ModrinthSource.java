@@ -63,7 +63,7 @@ public final class ModrinthSource implements ModSource {
             Map<String, String> fileHashes = new LinkedHashMap<>();
             file.getAsJsonObject("hashes").entrySet().forEach(hash -> fileHashes.put(hash.getKey(), hash.getValue().getAsString()));
             entries.put(match.getKey(), new Manifest.Entry(ID, version.get("project_id").getAsString(), version.get("id").getAsString(),
-                    file.get("filename").getAsString(), fileHashes, null, null));
+                    file.get("filename").getAsString(), fileHashes, null, null, null));
         }
         return entries;
     }

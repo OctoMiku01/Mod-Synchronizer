@@ -36,15 +36,32 @@ public record Manifest(String minecraft, String loader, List<Entry> mods, @Nulla
      * @param side    where the mod is needed, both when left out
      * @param modId   the Fabric mod ID in the jar: another version of the same mod in the mods folder is replaced, as
      *                Fabric does not start with two; optional, but without it such a jar is only found after the download
+     * @param latest  for GitHub: true to follow the repo's newest release for the list's Minecraft version instead of
+     *                the one named, so that a new release reaches every player without a new export; the release
+     *                named stays the fallback
      */
     public record Entry(String source, String project, String version, String file, Map<String, String> hashes,
-                        @Nullable Side side, @Nullable String modId) {
+                        @Nullable Side side, @Nullable String modId, @Nullable Boolean latest) {
         public Entry withModId(@Nullable String id) {
-            return new Entry(source, project, version, file, hashes, side, id);
+            return new Entry(source, project, version, file, hashes, side, id, latest);
         }
 
         public Entry withSide(@Nullable Side newSide) {
-            return new Entry(source, project, version, file, hashes, newSide, modId);
+            return new Entry(source, project, version, file, hashes, newSide, modId, latest);
+        }
+
+        /** Left out of the list when not following, so that lists stay as they were */
+        public Entry withLatest(boolean follow) {
+            return new Entry(source, project, version, file, hashes, side, modId, follow ? Boolean.TRUE : null);
+        }
+
+        /** The same mod in another release, still following */
+        public Entry withRelease(String newVersion, String newFile, Map<String, String> newHashes) {
+            return new Entry(source, project, newVersion, newFile, newHashes, side, modId, latest);
+        }
+
+        public boolean followsLatest() {
+            return Boolean.TRUE.equals(latest);
         }
 
         /** Stays the same across versions of the mod: an entry with the same key replaces the older file */

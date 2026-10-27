@@ -67,6 +67,8 @@
 	"modsync.applyFailed.message": "Beim letzten Beenden konnten diese Dateien nicht eingespielt werden, meist weil ein anderes Programm sie offen hielt (ein Virenscanner oder ein zweites Minecraft). Beim jetzigen Beenden erneut versuchen, oder verwerfen und neu mit der Liste vergleichen?",
 	"modsync.applyFailed.retry": "Beim Beenden erneut versuchen",
 	"modsync.applyFailed.discard": "Neu vergleichen",
+	"modsync.export.followLatest": "GitHub-Mods immer neuestes Release",
+	"modsync.export.followLatest.tooltip": "An: Mods aus GitHub-Releases folgen dem neuesten Release ihres Repos für diese Minecraft-Version. Ein neues Release kommt beim nächsten Start bei allen an, ohne neuen Export. Aus: Die Liste bleibt beim Release, das gerade installiert ist.",
 	"modsync.export.folder": "Exportieren nach",
 	"modsync.export.folder.hint": "Leer: modsync-export im Spielordner",
 	"modsync.export.folder.pick": "Wählen…",
