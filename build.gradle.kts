@@ -1,6 +1,6 @@
 // Minecraft 26.x ships unobfuscated, so this uses the non-remapping Fabric Loom.
 plugins {
-    id("net.fabricmc.fabric-loom") version "1.18.3"
+    id("net.fabricmc.fabric-loom") version "1.19.2"
 }
 
 val minecraft = property("minecraft_version") as String

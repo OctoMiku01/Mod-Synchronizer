@@ -1,6 +1,6 @@
 # Mod Synchronizer
 
-Fabric mod for Minecraft 26.2 that keeps your mods folder in line with a shared mod list. Only the list is shared:
+Fabric mod for Minecraft 26.3 that keeps your mods folder in line with a shared mod list. Only the list is shared:
 every player downloads the jars straight from their source, checked against the hashes in the list.
 
 ## Settings
@@ -95,14 +95,14 @@ GitHub App or OAuth app can be entered by its client ID in the settings.
 
 ```json
 {
-  "minecraft": "26.2",
+  "minecraft": "26.3",
   "loader": "fabric",
   "mods": [
     {
       "source": "modrinth",
       "project": "P7dR8mSH",
       "version": "ewUK83HI",
-      "file": "fabric-api-0.161.0+26.2.jar",
+      "file": "fabric-api-0.164.0+26.3.jar",
       "hashes": { "sha1": "…", "sha512": "…" },
       "side": "both",
       "modId": "fabric-api"

@@ -1,5 +1,6 @@
 package io.github.octomiku01.modsync.client;
 
+import com.mojang.blaze3d.Blaze3D;
 import io.github.octomiku01.modsync.ModSync;
 import io.github.octomiku01.modsync.core.GitHubAuth;
 import io.github.octomiku01.modsync.core.GitHubSource;
@@ -18,7 +19,6 @@ import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 /** The way through a sync: what changes, the download, then quitting so the helper can swap the jars */
@@ -103,7 +103,7 @@ final class SyncScreens {
                     Thread waiting = Thread.currentThread();
                     client.execute(() -> {
                         client.keyboardHandler.setClipboard(code.userCode());
-                        Util.getPlatform().openUri(code.verificationUri());
+                        Blaze3D.openUri(code.verificationUri());
                         client.gui.setScreen(new AlertScreen(() -> {
                             waiting.interrupt();
                             client.gui.setScreen(back);
